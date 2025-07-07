@@ -3,13 +3,10 @@
 import { useEffect, useState } from 'react';
 import { Athlete } from '@/app/dashboard';
 import { Card, CardContent } from '../ui/card';
-import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-import {
-  Category,
-  useGenerateCategories,
-} from '@/app/hooks/useGenerateCategory';
+import { Category } from '@/app/hooks/useGenerateCategory';
 import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateBracketByAgeGroup';
+import { useCategorizeAthletesToBrackets } from '@/app/hooks/useCategorizeAthletesToBrackets';
 
 export type BracketCategory = {
   category: Category;
@@ -22,15 +19,9 @@ type BracketsPageProps = {
 
 export default function BracketsPage({ athletes }: BracketsPageProps) {
   const [brackets, setBrackets] = useState<BracketCategory[]>([]);
-  const { infantil, juvenil, adulto } = useSeparateBracketByAgeGroup(brackets);
 
   const router = useRouter();
   function loadFromLocalStorage() {
-    const athletes = localStorage.getItem('athletes');
-    if (!athletes || JSON.parse(athletes).length === 0) {
-      localStorage.clear();
-      return;
-    }
     const stored = localStorage.getItem('all-brackets');
     if (stored) {
       const parsed = JSON.parse(stored) as Category[];
@@ -48,41 +39,9 @@ export default function BracketsPage({ athletes }: BracketsPageProps) {
     loadFromLocalStorage();
   }, []);
 
-  // Função para gerar brackets
-  // const generateAllBrackets = () => {
-  //   localStorage.removeItem('all-brackets');
-  //   const categories = brackets.length
-  //     ? brackets.map((b) => b.category.name)
-  //     : ca.map((c) => c.name);
-  //   console.log('Athletes from localStorage:', categories);
-
-  //   const newBrackets: BracketCategory[] = categories.map((category) => {
-  //     const athletesInCategory = athletes.filter(
-  //       (a) => a.category?.name === category,
-  //     );
-  //     const shuffled = [...athletesInCategory].sort(() => Math.random() - 0.5);
-  //     console.log('shuffled athletes:', shuffled);
-  //     const fights: Array<[string, string]> = [];
-  //     for (let i = 0; i < shuffled.length; i += 2) {
-  //       const a = shuffled[i];
-  //       const b = shuffled[i + 1] || 'W.O.';
-  //       fights.push([a.name, b.name]);
-  //     }
-
-  //     const ages = athletesInCategory.map((a) => a.age);
-  //     const weights = athletesInCategory.map((a) => a.weight);
-  //     console.log('ages:', ages);
-  //     return {
-  //       name: category,
-  //       fights,
-  //     };
-  //   });
-
-  //   localStorage.setItem('all-brackets', JSON.stringify(newBrackets));
-  //   setBrackets(newBrackets);
-  // };
-
-  const orderedInfantil = infantil;
+  const filledBrackets = useCategorizeAthletesToBrackets(brackets, athletes);
+  const { infantil, juvenil, adulto } =
+    useSeparateBracketByAgeGroup(filledBrackets);
 
   return (
     <div className="space-y-6">
@@ -91,7 +50,7 @@ export default function BracketsPage({ athletes }: BracketsPageProps) {
           {/* Infantil */}
           <div className="space-y-4 max-h-[600px] overflow-y-auto">
             <h2 className="text-xl font-bold text-center">🧒 Infantil</h2>
-            {orderedInfantil.map((bracket) => (
+            {infantil.map((bracket) => (
               <Card
                 key={bracket.category.name}
                 className="cursor-pointer hover:shadow-lg"

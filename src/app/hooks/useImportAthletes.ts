@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useCallback } from 'react';
 import Papa from 'papaparse';
 import {
@@ -32,7 +33,7 @@ export const useImportAthletes = () => {
       header: true,
       skipEmptyLines: true,
     });
-    localStorage.removeItem('all-brackets');
+    // localStorage.removeItem('all-brackets');
     if (result.errors.length > 0) {
       console.error('Erro ao processar CSV:', result.errors);
       return [];

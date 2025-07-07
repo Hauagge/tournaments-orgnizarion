@@ -18,7 +18,7 @@ export default function CategoryPage() {
     const stored = localStorage.getItem(`bracket-${slug}`);
     if (stored) {
       const parsed = JSON.parse(stored) as BracketCategory;
-      if (parsed.name === slug) {
+      if (parsed.category.name === slug) {
         setBracket(parsed);
       }
     }
@@ -62,7 +62,7 @@ export default function CategoryPage() {
       <Button onClick={() => router.back()}>Voltar</Button>
 
       <h1 className="text-2xl font-bold">
-        Chave completa da categoria: {bracket.name}
+        Chave completa da categoria: {bracket.category.name}
       </h1>
 
       {rounds.map((round, idx) => (

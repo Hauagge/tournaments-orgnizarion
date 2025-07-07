@@ -2,8 +2,8 @@ import { Athlete } from '../dashboard';
 
 export function sortCategories(categories: string[], athletes: Array<Athlete>) {
   return categories.sort((a, b) => {
-    const athletesA = athletes.filter((at) => at.category === a);
-    const athletesB = athletes.filter((at) => at.category === b);
+    const athletesA = athletes.filter((at) => at.category?.name === a);
+    const athletesB = athletes.filter((at) => at.category?.name === b);
 
     const avgAgeA =
       athletesA.reduce((acc, curr) => acc + curr.age, 0) /

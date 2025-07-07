@@ -17,7 +17,7 @@ type AthleteTabProps = {
   newAthlete: Athlete;
   setNewAthlete: (athlete: Athlete) => void;
   athletes: Array<Athlete>;
-  setAthletes: (athletes: Array<Athlete>) => void;
+  setAthletes: React.Dispatch<React.SetStateAction<Athlete[]>>;
 };
 
 export default function AthleteTabs({

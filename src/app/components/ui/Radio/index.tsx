@@ -21,7 +21,7 @@ export function Radio({
         checked={checked}
         onClick={(e) => {
           if (checked) {
-            // e.preventDefault();
+            e.preventDefault();
             onCheckedChange(false);
           }
         }}

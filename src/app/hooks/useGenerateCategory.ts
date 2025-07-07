@@ -9,6 +9,7 @@ import { AgeDivision } from '../components/enums/category';
 const belts = ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'];
 
 export type Category = {
+  id: number;
   name: string;
   belt: string;
   ageDivision: AgeDivisionRange;
@@ -32,6 +33,7 @@ export const useGenerateCategories = () => {
           Object.entries(weights).forEach(([weightName, maxWeight]) => {
             const categoryName = `${belt} - ${ageDivision} - ${weightName}`;
             result.push({
+              id: result.length + 1, // Simple ID generation
               name: categoryName,
               belt,
               ageDivision: {
