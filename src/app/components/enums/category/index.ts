@@ -207,19 +207,6 @@ const divisions = [
 ];
 
 export function getDivisionByAge(age: number): AgeDivisionRange | null {
-  // const divisions = [
-  //   { min: 7, max: 7, division: AgeDivision.MIRIM },
-  //   { min: 8, max: 9, division: AgeDivision.INFANTIL_A },
-  //   { min: 10, max: 11, division: AgeDivision.INFANTIL_B },
-  //   { min: 12, max: 13, division: AgeDivision.INFANTO_JUVENIL_A },
-  //   { min: 14, max: 15, division: AgeDivision.INFANTO_JUVENIL_B },
-  //   { min: 16, max: 17, division: AgeDivision.JUVENIL },
-  //   { min: 18, max: 29, division: AgeDivision.ADULTO },
-  //   { min: 30, max: 34, division: AgeDivision.MASTER },
-  //   { min: 35, max: 39, division: AgeDivision.SENIOR },
-  //   { min: 40, max: Infinity, division: AgeDivision.SUPER_SENIOR },
-  // ];
-
   return divisions.find((d) => age >= d.min && age <= d.max) || null;
 }
 
@@ -228,4 +215,40 @@ export function getAgeDivisionByName(name: string): AgeDivisionRange | null {
     (div) => div.division.toUpperCase() === name.toUpperCase(),
   );
   return division || null;
+}
+
+const beltsForCategory: { [key in AgeDivision]: string[] } = {
+  [AgeDivision.MIRIM]: ['Branca', 'Cinza', 'Amarela', 'Laranja'],
+  [AgeDivision.INFANTIL_A]: ['Branca', 'Cinza', 'Amarela', 'Laranja'],
+  [AgeDivision.INFANTIL_B]: ['Branca', 'Cinza', 'Amarela', 'Laranja'],
+  [AgeDivision.INFANTO_JUVENIL_A]: [
+    'Branca',
+    'Cinza',
+    'Amarela',
+    'Laranja',
+    'Verde',
+  ],
+  [AgeDivision.INFANTO_JUVENIL_B]: [
+    'Branca',
+    'Cinza',
+    'Amarela',
+    'Laranja',
+    'Verde',
+  ],
+  [AgeDivision.JUVENIL]: [
+    'Branca',
+    'Cinza',
+    'Amarela',
+    'Laranja',
+    'Verde',
+    'Azul',
+  ],
+  [AgeDivision.ADULTO]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  [AgeDivision.MASTER]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  [AgeDivision.SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  [AgeDivision.SUPER_SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+};
+
+export function getBeltsForCategory(ageDivision: AgeDivision): string[] {
+  return beltsForCategory[ageDivision] || [];
 }

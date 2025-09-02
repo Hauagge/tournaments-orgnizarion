@@ -1,4 +1,3 @@
-import { Athlete } from '@/app/dashboard';
 import { Card, CardContent } from '../../ui/card';
 import {
   Table,
@@ -11,15 +10,10 @@ import {
 import { TabsContent } from '../../ui/tabs';
 import { Radio } from '../../ui/Radio';
 import { useState } from 'react';
+import { useAthleteStore } from '@/app/store/useAthleteStore';
 
-type WeighInTabsProps = {
-  athletes: Array<Athlete>;
-  setAthletes: (athletes: Array<Athlete>) => void;
-};
-export default function WeighInTabs({
-  athletes,
-  setAthletes,
-}: WeighInTabsProps) {
+export default function WeighInTabs() {
+  const { athletes, updateAthlete } = useAthleteStore();
   const [search, setSearch] = useState('');
   const sortedAthletes = [...athletes].sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -27,6 +21,21 @@ export default function WeighInTabs({
   const filteredAthletes = sortedAthletes.filter((athlete) =>
     athlete.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const toggleAptoStatus = (id: number, apto: boolean) => {
+    const athlete = athletes.find((a) => a.id === id);
+    if (!athlete) return;
+    const isCurrentlyChecked = athlete.isApto === apto;
+    const newIsApto = isCurrentlyChecked ? undefined : apto;
+    const newStatus = newIsApto === undefined ? 'Aguardando' : 'Avaliado';
+    console.log(`Toggling athlete ${athlete.name} to ${newIsApto}`);
+    updateAthlete({
+      ...athlete,
+      isApto: newIsApto,
+      status: newStatus,
+    });
+  };
+
   return (
     <TabsContent value="pesagem">
       <Card>
@@ -42,6 +51,8 @@ export default function WeighInTabs({
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>Idade</TableHead>
+                <TableHead>Faixa</TableHead>
                 <TableHead>Peso registrado</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Status</TableHead>
@@ -53,41 +64,29 @@ export default function WeighInTabs({
               {filteredAthletes.map((athlete) => (
                 <TableRow key={athlete.id}>
                   <TableCell>{athlete.name}</TableCell>
+                  <TableCell>{athlete.age}</TableCell>
+                  <TableCell>{athlete.belt}</TableCell>
                   <TableCell>{athlete.weight}</TableCell>
                   <TableCell>{athlete.category?.name}</TableCell>
                   <TableCell>{athlete.status}</TableCell>
                   <TableCell>
                     <Radio
+                      key={`apto-${athlete.id}-${athlete.isApto}`}
                       checked={athlete.isApto === true}
-                      onCheckedChange={() => {
-                        const updated = [...athletes];
-                        const idex = updated.findIndex(
-                          (a) => a.id === athlete.id,
-                        );
-                        updated[idex].isApto =
-                          athlete.isApto === true ? undefined : true;
-                        updated[idex].status =
-                          athlete.isApto !== true ? 'Aguardando' : 'Avaliado';
-                        setAthletes(updated);
-                      }}
+                      onCheckedChange={() =>
+                        toggleAptoStatus(athlete.id!, true)
+                      }
                       label="Apto"
                       name={`apto-${athlete.id}`}
                     />
                   </TableCell>
                   <TableCell>
                     <Radio
+                      key={`no-apto-${athlete.id}-${athlete.isApto}`}
                       checked={athlete.isApto === false}
-                      onCheckedChange={() => {
-                        const updated = [...athletes];
-                        const idex = updated.findIndex(
-                          (a) => a.id === athlete.id,
-                        );
-                        updated[idex].isApto =
-                          athlete.isApto === false ? undefined : false;
-                        updated[idex].status =
-                          athlete.isApto !== false ? 'Aguardando' : 'Avaliado';
-                        setAthletes(updated);
-                      }}
+                      onCheckedChange={() =>
+                        toggleAptoStatus(athlete.id!, false)
+                      }
                       label="Não Apto"
                       name={`apto-${athlete.id}`}
                     />

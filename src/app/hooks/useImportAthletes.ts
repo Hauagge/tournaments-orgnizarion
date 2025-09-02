@@ -6,7 +6,8 @@ import {
   getDivisionByAge,
 } from '../components/enums/category';
 import { Athlete } from '../dashboard';
-
+import { updateBracketsWithFights } from '../utils/udpate-brackets';
+import { useAthleteStore } from '../store/useAthleteStore';
 export type CategoryMap = {
   name: string;
   minWeight: number;
@@ -28,6 +29,7 @@ export type AthletePropsCSV = {
 };
 
 export const useImportAthletes = () => {
+  const setAthletes = useAthleteStore((state) => state.setAthletes);
   const parseCsv = useCallback((csvData: string): Athlete[] => {
     const result = Papa.parse(csvData, {
       header: true,
@@ -82,15 +84,14 @@ export const useImportAthletes = () => {
         };
       },
     );
-
+    setAthletes(athletes);
+    updateBracketsWithFights(athletes);
+    // updateBracketsWithFights(athletes);
     return athletes;
   }, []);
 
   const handleFileUpload = useCallback(
-    (
-      e: React.ChangeEvent<HTMLInputElement>,
-      callback: (athletes: Athlete[]) => void,
-    ) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
@@ -98,8 +99,7 @@ export const useImportAthletes = () => {
       reader.onload = (evt) => {
         const text = evt.target?.result;
         if (typeof text === 'string') {
-          const importedAthletes = parseCsv(text);
-          callback(importedAthletes);
+          parseCsv(text);
         }
       };
       reader.readAsText(file);

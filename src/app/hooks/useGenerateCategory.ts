@@ -1,33 +1,21 @@
 import { useMemo } from 'react';
 import {
-  AgeDivisionRange,
   CATEGORIES_BY_AGE_WEIGHT,
   getAgeDivisionByName,
+  getBeltsForCategory,
 } from '../components/enums/category';
 import { AgeDivision } from '../components/enums/category';
-
-const belts = ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'];
-
-export type Category = {
-  id: number;
-  name: string;
-  belt: string;
-  ageDivision: AgeDivisionRange;
-  weightName: string;
-  minWeight?: number;
-  maxWeight: number;
-  fights: Array<[string, string]>; // Inicialmente vazio
-};
+import { Category } from '../types';
 
 export const useGenerateCategories = () => {
   const categories = useMemo(() => {
     const result: Category[] = [];
 
-    belts.forEach((belt) => {
-      (Object.keys(CATEGORIES_BY_AGE_WEIGHT) as Array<AgeDivision>).forEach(
-        (ageDivision) => {
+    (Object.keys(CATEGORIES_BY_AGE_WEIGHT) as Array<AgeDivision>).forEach(
+      (ageDivision) => {
+        const belts = getBeltsForCategory(ageDivision);
+        belts.forEach((belt) => {
           const weights = CATEGORIES_BY_AGE_WEIGHT[ageDivision];
-
           const division = getAgeDivisionByName(ageDivision);
 
           Object.entries(weights).forEach(([weightName, maxWeight]) => {
@@ -46,13 +34,12 @@ export const useGenerateCategories = () => {
               fights: [],
             });
           });
-        },
-      );
-    });
+        });
+      },
+    );
 
     return result;
   }, []);
-
   return {
     categories,
   };

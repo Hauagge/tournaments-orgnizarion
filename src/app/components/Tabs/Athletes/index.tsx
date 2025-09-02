@@ -12,22 +12,22 @@ import {
 } from '../../ui/table';
 import { TabsContent } from '../../ui/tabs';
 import { Athlete } from '@/app/dashboard';
+import { DragAndDrop } from '../../ui/dragAndDrop';
+import { useAthleteStore } from '@/app/store/useAthleteStore';
 
 type AthleteTabProps = {
   newAthlete: Athlete;
   setNewAthlete: (athlete: Athlete) => void;
-  athletes: Array<Athlete>;
-  setAthletes: React.Dispatch<React.SetStateAction<Athlete[]>>;
 };
 
 export default function AthleteTabs({
   newAthlete,
   setNewAthlete,
-  athletes,
-  setAthletes,
 }: AthleteTabProps) {
+  const { athletes, addAthlete } = useAthleteStore();
   const { handleFileUpload } = useImportAthletes();
-  const addAthlete = () => {
+  console.log('Athletes in AthleteTabs:', athletes);
+  const handleAthlete = () => {
     if (
       newAthlete.name &&
       newAthlete.belt &&
@@ -36,10 +36,11 @@ export default function AthleteTabs({
       newAthlete.category &&
       newAthlete.age > 0
     ) {
-      setAthletes([
-        ...athletes,
-        { ...newAthlete, weight: Number(newAthlete.weight) },
-      ]);
+      addAthlete({
+        ...newAthlete,
+        weight: Number(newAthlete.weight),
+      });
+
       setNewAthlete({
         name: '',
         belt: '',
@@ -125,20 +126,13 @@ export default function AthleteTabs({
                 });
               }}
             />
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) =>
-                handleFileUpload(e, (imported) => {
-                  setAthletes((prev) => [...prev, ...imported]);
-                })
-              }
-            />
+            <DragAndDrop handleFileUpload={handleFileUpload} />
           </div>
-          <Button onClick={addAthlete}>Adicionar Atleta</Button>
+          <Button onClick={handleAthlete}>Adicionar Atleta</Button>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>ID</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>Idade</TableHead>
 
@@ -151,6 +145,7 @@ export default function AthleteTabs({
             <TableBody>
               {athletes.map((a, i) => (
                 <TableRow key={i}>
+                  <TableCell>{i + 1}</TableCell>
                   <TableCell>{a.name}</TableCell>
                   <TableCell>{a.age}</TableCell>
 

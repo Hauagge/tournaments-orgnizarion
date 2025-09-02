@@ -17,7 +17,7 @@ export function Tabs({
   const [value, setValue] = useState(defaultValue);
   return (
     <TabsContext.Provider value={{ value, setValue }}>
-      <div className="w-full">{children}</div>
+      <div className="w-full h-1">{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -63,6 +63,6 @@ export function TabsContent({
   if (!context) throw new Error('TabsContent must be used within Tabs');
 
   return context.value === value ? (
-    <div className="mt-2">{children}</div>
+    <div className=" mt-2">{children}</div>
   ) : null;
 }
