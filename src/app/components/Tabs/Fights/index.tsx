@@ -8,7 +8,7 @@ export default function BracketsPage() {
   const { categories } = useCategoryStore();
   console.log('Lutasa:', categories);
   return (
-    <TabsContent value="atletas">
+    <TabsContent value="lutas">
       <div className="p-6 space-y-6">
         <h1 className="text-3xl font-bold text-center">Chaves de Lutas</h1>
         {categories.length === 0 ? (
