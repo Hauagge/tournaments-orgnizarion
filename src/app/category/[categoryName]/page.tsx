@@ -60,11 +60,11 @@
 // }
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent } from '@/app/components/ui/card';
+// import { Card, CardContent } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
+// import { Input } from '@/app/components/ui/input';
 import { useCategoryStore } from '@/app/store/useCategoryStore';
 import { Fight } from '@/app/types';
 import { Round } from '@/app/components/Rounds';
@@ -83,8 +83,10 @@ export default function CategoryPage() {
   );
 
   // estado local de UI
-  const [search, setSearch] = useState('');
-  const [winners, setWinners] = useState<WinnerMap>({});
+  // const [search, setSearch] = useState('');
+  // const [winners, setWinners] = useState<WinnerMap>({});
+  const search = '';
+  const winners: WinnerMap = {};
 
   // apenas lutas da categoria (sem filtro de faixa)
   const filteredFights = useMemo(() => {
@@ -97,28 +99,28 @@ export default function CategoryPage() {
     });
   }, [bracket?.fights, search]);
 
-  function handleSelectWinner(index: number, athlete: string) {
-    setWinners((prev) => ({
-      ...prev,
-      [index]: prev[index] === athlete ? null : athlete,
-    }));
-  }
+  // function handleSelectWinner(index: number, athlete: string) {
+  //   setWinners((prev) => ({
+  //     ...prev,
+  //     [index]: prev[index] === athlete ? null : athlete,
+  //   }));
+  // }
 
-  function roundLabel(idx: number, total: number) {
-    if (total >= 8) {
-      if (idx < total / 4) return 'Oitavas';
-      if (idx < total / 2) return 'Quartas';
-      if (idx < total - 1) return 'Semifinal';
-      return 'Final';
-    }
-    if (total >= 4) {
-      if (idx < total / 2) return 'Quartas';
-      if (idx < total - 1) return 'Semifinal';
-      return 'Final';
-    }
-    if (total === 2) return idx === 1 ? 'Final' : 'Semifinal';
-    return 'Luta';
-  }
+  // function roundLabel(idx: number, total: number) {
+  //   if (total >= 8) {
+  //     if (idx < total / 4) return 'Oitavas';
+  //     if (idx < total / 2) return 'Quartas';
+  //     if (idx < total - 1) return 'Semifinal';
+  //     return 'Final';
+  //   }
+  //   if (total >= 4) {
+  //     if (idx < total / 2) return 'Quartas';
+  //     if (idx < total - 1) return 'Semifinal';
+  //     return 'Final';
+  //   }
+  //   if (total === 2) return idx === 1 ? 'Final' : 'Semifinal';
+  //   return 'Luta';
+  // }
 
   const totalFights = bracket?.fights?.length ?? 0;
   const finishedCount = Object.values(winners).filter(Boolean).length;
@@ -212,6 +214,7 @@ export default function CategoryPage() {
           />
         ) : (
           filteredFights.map((fight: Fight, idx: number) => {
+            console.log('Fight', idx);
             return (
               <>
                 <Round
@@ -364,44 +367,44 @@ function EmptyState({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-function RowFighter({
-  name,
-  selected,
-  onClick,
-  side,
-}: {
-  name: string;
-  selected: boolean;
-  onClick: () => void;
-  side: 'left' | 'right';
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'w-full flex items-center justify-between px-3 py-3 text-left',
-        'hover:bg-white/[0.04] transition-colors',
-        selected ? 'bg-white/[0.06]' : '',
-      ].join(' ')}
-    >
-      <span className="truncate font-medium">
-        {name || <span className="text-muted-foreground">W.O.</span>}
-      </span>
-      <span
-        className={[
-          'text-[10px] px-2 py-1 rounded-full border',
-          selected
-            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-            : 'border-white/10 text-muted-foreground',
-        ].join(' ')}
-      >
-        {selected
-          ? 'Vencedor'
-          : side === 'left'
-          ? 'Selecionar A'
-          : 'Selecionar B'}
-      </span>
-    </button>
-  );
-}
+// function RowFighter({
+//   name,
+//   selected,
+//   onClick,
+//   side,
+// }: {
+//   name: string;
+//   selected: boolean;
+//   onClick: () => void;
+//   side: 'left' | 'right';
+// }) {
+//   return (
+//     <button
+//       type="button"
+//       onClick={onClick}
+//       className={[
+//         'w-full flex items-center justify-between px-3 py-3 text-left',
+//         'hover:bg-white/[0.04] transition-colors',
+//         selected ? 'bg-white/[0.06]' : '',
+//       ].join(' ')}
+//     >
+//       <span className="truncate font-medium">
+//         {name || <span className="text-muted-foreground">W.O.</span>}
+//       </span>
+//       <span
+//         className={[
+//           'text-[10px] px-2 py-1 rounded-full border',
+//           selected
+//             ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+//             : 'border-white/10 text-muted-foreground',
+//         ].join(' ')}
+//       >
+//         {selected
+//           ? 'Vencedor'
+//           : side === 'left'
+//           ? 'Selecionar A'
+//           : 'Selecionar B'}
+//       </span>
+//     </button>
+//   );
+// }
