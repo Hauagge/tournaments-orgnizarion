@@ -1,5 +1,4 @@
-import { Athlete } from '../dashboard';
-import { Fight } from '../types';
+import { Athlete, Fight } from '../types';
 
 export function generateFights(athletes: Athlete[]): Array<Fight> {
   const shuffled = [...athletes].sort(() => Math.random() - 0.5);

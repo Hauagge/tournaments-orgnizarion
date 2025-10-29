@@ -5,8 +5,7 @@ import {
   CATEGORIES_BY_AGE_WEIGHT,
   getDivisionByAge,
 } from '../components/enums/category';
-import { Athlete } from '../dashboard';
-import { updateBracketsWithFights } from '../utils/udpate-brackets';
+import { Athlete, BeltsEnum, GenderEnum } from '../types';
 import { useAthleteStore } from '../store/useAthleteStore';
 export type CategoryMap = {
   name: string;
@@ -14,7 +13,8 @@ export type CategoryMap = {
   maxWeight: number;
   maxAge?: number;
   minAge?: number;
-  belt: string;
+  belt: BeltsEnum | '';
+  gender?: GenderEnum | '';
 };
 
 export type AthletePropsCSV = {
@@ -26,6 +26,7 @@ export type AthletePropsCSV = {
   idade: string;
   isApto?: boolean;
   status: 'Aguardando' | 'Avaliado';
+  gender: GenderEnum | '';
 };
 
 export const useImportAthletes = () => {
@@ -67,25 +68,26 @@ export const useImportAthletes = () => {
                 : 0,
               maxAge: ageDivision?.max,
               minAge: ageDivision?.min,
-              belt: row.faixa,
+              belt: BeltsEnum[row.faixa as keyof typeof BeltsEnum] || '',
+              gender: GenderEnum[row.gender as keyof typeof GenderEnum] || '',
             }
           : null;
 
         return {
           id: idx + 1, // Use index as ID for simplicity
           name: row.nome,
-          belt: row.faixa,
+          belt: BeltsEnum[row.faixa as keyof typeof BeltsEnum] || '',
           weight,
           academy: row.academia,
           age,
           category: category || null,
           isApto: undefined,
           status: 'Aguardando',
+          gender: GenderEnum[row.gender as keyof typeof GenderEnum] || '',
         };
       },
     );
     setAthletes(athletes);
-    updateBracketsWithFights(athletes);
     // updateBracketsWithFights(athletes);
     return athletes;
   }, []);

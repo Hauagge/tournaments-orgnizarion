@@ -26,7 +26,7 @@ export default function CardCategory({
         )
         .map((category) => (
           <Card
-            key={category.name}
+            key={category.id}
             className="cursor-pointer hover:shadow-lg"
             onClick={() =>
               router.push(`/category/${encodeURIComponent(category.name)}`)
@@ -39,9 +39,9 @@ export default function CardCategory({
                 anos
               </p>
               <p>
-                Peso: {category?.minWeight} - {category?.maxWeight} kg
+                Peso: {category?.minWeight} kg - {category?.maxWeight} kg
               </p>
-              <p>{category.fights?.length || 0} lutas</p>
+              <p>{category.athletes?.length - 1 || 0} lutas</p>
             </CardContent>
           </Card>
         ))}

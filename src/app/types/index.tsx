@@ -10,14 +10,32 @@ export type Fight = {
 export type Athlete = {
   id?: number;
   name: string;
-  belt: string;
+  belt: BeltsEnum | '';
   weight: number;
   academy: string;
   category: CategoryMap | null;
   age: number;
   isApto?: boolean;
+  gender: GenderEnum | '';
   status?: 'Aguardando' | 'Avaliado';
 };
+
+export enum GenderEnum {
+  Masculino = 'M',
+  Feminino = 'F',
+}
+
+export enum BeltsEnum {
+  BRANCA = 'BRANCA',
+  CINZA = 'CINZA',
+  AMARELA = 'AMARELA',
+  LARANJA = 'LARANJA',
+  VERDE = 'VERDE',
+  AZUL = 'AZUL',
+  ROXA = 'ROXA',
+  MARROM = 'MARROM',
+  PRETA = 'PRETA',
+}
 
 export type FightContextType = {
   athletes: Athlete[];
@@ -35,5 +53,10 @@ export type Category = {
   weightName: string;
   minWeight?: number;
   maxWeight: number;
-  fights?: Array<Fight>; // Inicialmente vazio
+  athletes: Array<Athlete>; // Inicialmente vazio
+};
+
+export type Bracket = {
+  category: string;
+  athletes: Athlete[];
 };

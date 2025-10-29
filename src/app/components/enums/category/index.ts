@@ -194,7 +194,7 @@ export type AgeDivisionRange = {
 };
 
 const divisions = [
-  { min: 7, max: 7, division: AgeDivision.MIRIM },
+  { min: 6, max: 7, division: AgeDivision.MIRIM },
   { min: 8, max: 9, division: AgeDivision.INFANTIL_A },
   { min: 10, max: 11, division: AgeDivision.INFANTIL_B },
   { min: 12, max: 13, division: AgeDivision.INFANTO_JUVENIL_A },
@@ -207,6 +207,7 @@ const divisions = [
 ];
 
 export function getDivisionByAge(age: number): AgeDivisionRange | null {
+  console.log('Getting division for age:', age);
   return divisions.find((d) => age >= d.min && age <= d.max) || null;
 }
 

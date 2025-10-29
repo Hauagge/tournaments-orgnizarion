@@ -6,7 +6,6 @@ import { TabsContent } from '../../ui/tabs';
 
 export default function BracketsPage() {
   const { categories } = useCategoryStore();
-  console.log('Lutasa:', categories);
   return (
     <TabsContent value="lutas">
       <div className="p-6 space-y-6">
@@ -22,33 +21,16 @@ export default function BracketsPage() {
                     {category.name} - {category.belt}
                   </h2>
                   <div className="space-y-2">
-                    {category?.fights?.length &&
-                      category?.fights?.length > 0 &&
-                      category?.fights.map((it, idx) => {
-                        return it ? (
-                          <div
-                            key={idx}
-                            className="flex justify-between border p-2 rounded"
-                          >
-                            <span>{it.athletes[0]}</span>
-                            <span className="font-semibold text-gray-500">
-                              vs
-                            </span>
-                            <span>{it.athletes[1]}</span>
-                          </div>
-                        ) : (
-                          <div
-                            key={idx}
-                            className="flex justify-between border p-2 rounded"
-                          >
-                            <span>Sem atleta</span>
-                            <span className="font-semibold text-gray-500">
-                              vs
-                            </span>
-                            <span>Sem atleta</span>
-                          </div>
-                        );
-                      })}
+                    {category?.athletes?.length &&
+                      category?.athletes?.length > 0 && (
+                        <div className="flex justify-between border p-2 rounded">
+                          <span>{category?.athletes[0].name}</span>
+                          <span className="font-semibold text-gray-500">
+                            vs
+                          </span>
+                          <span>{category?.athletes[1].name}</span>
+                        </div>
+                      )}
                   </div>
                 </CardContent>
               </Card>

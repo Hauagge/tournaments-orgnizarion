@@ -2,23 +2,29 @@ import { TabsContent } from '../../ui/tabs';
 
 import { useState } from 'react';
 import { useCategoryStore } from '@/app/store/useCategoryStore';
-import { useCategorizeAthletesToBrackets } from '@/app/hooks/useCategorizeAthletesToBrackets';
 import CardCategory from '../../CategoryCards';
 import { useAthleteStore } from '@/app/store/useAthleteStore';
-import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateBracketByAgeGroup';
+import { Button } from '../../ui/button';
+import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateAthletesCustomaCategory';
 
 export default function BracketTabs() {
   const [showOnlyWithFights, setShowOnlyWithFights] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const { categories } = useCategoryStore();
+  const { categories, updateFightsFromAthletes } = useCategoryStore();
   const { athletes } = useAthleteStore();
+  const [generating, setGenerating] = useState(false);
+  // useCategorizeAthletesToBrackets(athletes);
 
-  useCategorizeAthletesToBrackets(athletes);
+  const { infantil, juvenil } = useSeparateBracketByAgeGroup(categories);
 
-  const { infantil, juvenil, adulto } = useSeparateBracketByAgeGroup(
-    categories,
-    showOnlyWithFights,
-  );
+  async function handleGenerate() {
+    setGenerating(true);
+    try {
+      updateFightsFromAthletes(athletes);
+    } finally {
+      setGenerating(false);
+    }
+  }
   return (
     <TabsContent value="chaves">
       <div className="  space-y-6">
@@ -41,6 +47,19 @@ export default function BracketTabs() {
             className="ml-auto border px-2 py-1 rounded text-sm w-64"
           />
         </div>
+        <Button
+          size="xl"
+          onClick={handleGenerate}
+          disabled={generating || athletes.length === 0}
+          className="ml-0 sm:ml-2"
+          title={
+            athletes.length === 0
+              ? 'Adicione atletas para gerar chaves'
+              : 'Gerar chaves das lutas'
+          }
+        >
+          {generating ? 'Gerando...' : 'Gerar todas as chaves'}
+        </Button>
         {categories.length > 0 ? (
           <div className=" h-[85vh] flex flex-col lg:flex-row gap-6 flex-wrap max-w-screen overflow-hidden ">
             <CardCategory
@@ -51,11 +70,6 @@ export default function BracketTabs() {
             <CardCategory
               categoryName={'👦 Juvenil'}
               categories={juvenil}
-              searchTerm={searchTerm}
-            />
-            <CardCategory
-              categoryName={'🧑 Adulto'}
-              categories={adulto}
               searchTerm={searchTerm}
             />
           </div>

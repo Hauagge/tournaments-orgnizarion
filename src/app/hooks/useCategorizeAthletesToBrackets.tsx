@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Athlete } from '../dashboard';
 import { useCategoryStore } from '../store/useCategoryStore';
 import { generateFights } from '../utils/generate-fight';
+import { Athlete } from '../types';
 
 export const useCategorizeAthletesToBrackets = (athletes: Athlete[]) => {
   const { categories, setCategories } = useCategoryStore();

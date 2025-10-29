@@ -8,30 +8,17 @@ import BracketTabs from './components/Tabs/Brackets';
 import WeighInTabs from './components/Tabs/Weigh-in';
 import FightsTab from './components/Tabs/Fights';
 import ResultTab from './components/Tabs/Results';
-import { CategoryMap } from './hooks/useImportAthletes';
 import { useGenerateCategories } from './hooks/useGenerateCategory';
-import { useAthleteStore } from './store/useAthleteStore';
 import { useCategoryStore } from './store/useCategoryStore';
-
-export type Athlete = {
-  id?: number;
-  name: string;
-  belt: string;
-  weight: number;
-  academy: string;
-  category: CategoryMap | null;
-  age: number;
-  isApto?: boolean;
-  status?: 'Aguardando' | 'Avaliado';
-};
+import { Athlete } from './types';
 
 export type BracketMap = {
   [category: string]: [string, string][];
 };
 export default function JiujitsuTournamentUI() {
   const { categories } = useGenerateCategories();
-  const { athletes } = useAthleteStore();
-  const { setCategories, updateFightsFromAthletes } = useCategoryStore();
+  // const { athletes } = useAthleteStore();
+  const { setCategories } = useCategoryStore();
 
   const [newAthlete, setNewAthlete] = useState<Athlete>({
     id: 0,
@@ -39,6 +26,7 @@ export default function JiujitsuTournamentUI() {
     belt: '',
     weight: 0,
     academy: '',
+    gender: '',
     category: {
       name: '',
       minWeight: 0,
@@ -56,12 +44,6 @@ export default function JiujitsuTournamentUI() {
     setCategories(categories);
   }, [categories, setCategories]);
 
-  useEffect(() => {
-    if (athletes.length > 0) {
-      updateFightsFromAthletes(athletes);
-    }
-  }, [athletes, updateFightsFromAthletes]);
-
   return (
     <div className="container p-6 space-y-6 max-w-screen">
       <h1 className="text-3xl font-bold">Painel do Campeonato de Jiu-Jitsu</h1>
@@ -70,8 +52,8 @@ export default function JiujitsuTournamentUI() {
           <TabsTrigger value="atletas">Atletas</TabsTrigger>
           <TabsTrigger value="chaves">Chaves</TabsTrigger>
           <TabsTrigger value="pesagem">Pesagem</TabsTrigger>
-          <TabsTrigger value="lutas">Lutas</TabsTrigger>
-          <TabsTrigger value="resultados">Resultados</TabsTrigger>
+          {/* <TabsTrigger value="lutas">Lutas</TabsTrigger> */}
+          {/* <TabsTrigger value="resultados">Resultados</TabsTrigger> */}
         </TabsList>
 
         <AthleteTabs newAthlete={newAthlete} setNewAthlete={setNewAthlete} />

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Athlete } from '@/app/dashboard';
+import { Athlete } from '../types';
 
 type AthleteStore = {
   athletes: Athlete[];

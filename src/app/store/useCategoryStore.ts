@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Athlete, Category, Fight } from '../types';
-import { updateBracketsWithFights } from '../utils/udpate-brackets';
+import { groupAthletes } from '../utils/group-athlete-by-category';
 
 type CategoryStore = {
   categories: Category[];
@@ -21,8 +21,12 @@ export const useCategoryStore = create<CategoryStore>()(
         );
         set({ categories: updated });
       },
-      updateFightsFromAthletes: (athletes) =>
-        updateBracketsWithFights(athletes),
+      updateFightsFromAthletes: (athletes) => {
+        const updatedCategories = groupAthletes(athletes);
+        if (updatedCategories) {
+          set({ categories: updatedCategories.categories });
+        }
+      },
     }),
     { name: 'categories-storage' },
   ),
