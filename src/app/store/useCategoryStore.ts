@@ -2,12 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Athlete, Category, Fight } from '../types';
 import { groupAthletes } from '../utils/group-athlete-by-category';
+import { exportAllBracketsPdf } from '../utils/export-brackets-pdf';
 
 type CategoryStore = {
   categories: Category[];
   setCategories: (categories: Category[]) => void;
   updateCategoryFights: (name: string, fights: Array<Fight>) => void;
   updateFightsFromAthletes: (athletes: Athlete[]) => void;
+  exportAll: () => void;
 };
 
 export const useCategoryStore = create<CategoryStore>()(
@@ -26,6 +28,12 @@ export const useCategoryStore = create<CategoryStore>()(
         if (updatedCategories) {
           set({ categories: updatedCategories.categories });
         }
+      },
+
+      exportAll: () => {
+        const { categories } = get();
+        if (!categories || categories.length === 0) return;
+        exportAllBracketsPdf(categories, { landscape: false });
       },
     }),
     { name: 'categories-storage' },

@@ -18,15 +18,16 @@ export type CategoryMap = {
 };
 
 export type AthletePropsCSV = {
-  nome: string;
-  faixa: string;
-  peso: string;
-  academia: string;
+  Nome: string;
+  Faixa: string;
+  Peso: string;
+  Equipe: string;
   categoria?: CategoryMap;
-  idade: string;
+  Idade: string;
   isApto?: boolean;
   status: 'Aguardando' | 'Avaliado';
-  gender: GenderEnum | '';
+  Sexo: GenderEnum | '';
+  'Data de Nasc': string;
 };
 
 export const useImportAthletes = () => {
@@ -36,7 +37,6 @@ export const useImportAthletes = () => {
       header: true,
       skipEmptyLines: true,
     });
-    // localStorage.removeItem('all-brackets');
     if (result.errors.length > 0) {
       console.error('Erro ao processar CSV:', result.errors);
       return [];
@@ -44,51 +44,61 @@ export const useImportAthletes = () => {
     console.log('CSV parsed successfully:', result.data);
     const athletes: Athlete[] = (result.data as AthletePropsCSV[]).map(
       (row, idx) => {
-        const age = parseInt(row.idade, 10);
-        const weight = parseFloat(row.peso.replace(',', '.'));
+        const age = parseInt(row.Idade, 10);
+        const weight = parseFloat(row.Peso.replace(',', '.'));
 
         const ageDivision = getDivisionByAge(age);
         const weightMap = ageDivision
           ? CATEGORIES_BY_AGE_WEIGHT[ageDivision.division]
           : undefined;
 
-        const matchingCategory = weightMap
-          ? Object.entries(weightMap).find(
-              ([_, maxWeight]) =>
-                typeof maxWeight === 'number' && weight <= maxWeight,
-            )
-          : undefined;
+        const sortedCategories = weightMap
+          ? Object.entries(weightMap)
+              .filter(([_, maxWeight]) => typeof maxWeight === 'number')
+              .sort(([_, a], [__, b]) => +a - +b)
+          : [];
+
+        const matchingCategory = sortedCategories.find(
+          ([_, weight]) => +weight <= +weight.max && +weight >= +weight.min,
+        );
 
         const category: CategoryMap | null = matchingCategory
           ? {
               name: matchingCategory[0],
-              minWeight: parseFloat(matchingCategory[0]),
-              maxWeight: matchingCategory[1]
-                ? parseFloat(matchingCategory[1] as string)
-                : 0,
+              minWeight: parseFloat(String(matchingCategory[1].min)),
+              maxWeight: matchingCategory[1].max
+                ? parseFloat(String(matchingCategory[1].max))
+                : Infinity,
               maxAge: ageDivision?.max,
               minAge: ageDivision?.min,
-              belt: BeltsEnum[row.faixa as keyof typeof BeltsEnum] || '',
-              gender: GenderEnum[row.gender as keyof typeof GenderEnum] || '',
+              belt:
+                BeltsEnum[row.Faixa.toUpperCase() as keyof typeof BeltsEnum] ||
+                '',
+              gender:
+                GenderEnum[
+                  row.Sexo.toLocaleUpperCase() as keyof typeof GenderEnum
+                ] || '',
             }
           : null;
 
         return {
           id: idx + 1, // Use index as ID for simplicity
-          name: row.nome,
-          belt: BeltsEnum[row.faixa as keyof typeof BeltsEnum] || '',
+          name: row.Nome,
+          belt:
+            BeltsEnum[row.Faixa.toUpperCase() as keyof typeof BeltsEnum] || '',
           weight,
-          academy: row.academia,
+          academy: row.Equipe,
           age,
           category: category || null,
           isApto: undefined,
           status: 'Aguardando',
-          gender: GenderEnum[row.gender as keyof typeof GenderEnum] || '',
+          gender:
+            GenderEnum[row.Sexo.toUpperCase() as keyof typeof GenderEnum] ||
+            row.Sexo.toUpperCase(),
         };
       },
     );
     setAthletes(athletes);
-    // updateBracketsWithFights(athletes);
     return athletes;
   }, []);
 

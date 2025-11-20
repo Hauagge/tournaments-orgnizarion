@@ -6,14 +6,13 @@ import CardCategory from '../../CategoryCards';
 import { useAthleteStore } from '@/app/store/useAthleteStore';
 import { Button } from '../../ui/button';
 import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateAthletesCustomaCategory';
+import { ExportCategoriesPdfButton } from '../../exportPdfButton';
 
 export default function BracketTabs() {
-  const [showOnlyWithFights, setShowOnlyWithFights] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { categories, updateFightsFromAthletes } = useCategoryStore();
   const { athletes } = useAthleteStore();
   const [generating, setGenerating] = useState(false);
-  // useCategorizeAthletesToBrackets(athletes);
 
   const { infantil, juvenil } = useSeparateBracketByAgeGroup(categories);
 
@@ -29,16 +28,8 @@ export default function BracketTabs() {
     <TabsContent value="chaves">
       <div className="  space-y-6">
         <div className="flex items-center gap-2 px-4">
-          <input
-            id="fights-filter"
-            type="checkbox"
-            checked={showOnlyWithFights}
-            onChange={(e) => setShowOnlyWithFights(e.target.checked)}
-            className="h-4 w-4"
-          />
-          <label htmlFor="fights-filter" className="text-sm">
-            Mostrar apenas categorias com luta
-          </label>
+          <ExportCategoriesPdfButton />
+
           <input
             type="text"
             placeholder="Buscar categoria..."

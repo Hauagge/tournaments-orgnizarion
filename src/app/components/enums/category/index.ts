@@ -4,11 +4,7 @@ type AgeCategory =
   | 'Infantil B'
   | 'Infanto Juvenil A'
   | 'Infanto Juvenil B'
-  | 'Juvenil'
-  | 'Adulto'
-  | 'Master'
-  | 'Senior'
-  | 'Super Senior';
+  | 'Juvenil';
 
 type WeightClass =
   | 'Galo'
@@ -25,7 +21,7 @@ type WeightClass =
 
 type CategoryWeightMap = {
   [age in AgeCategory]: {
-    [weight in WeightClass]?: number | string; // alguns têm "Acima" ou "de"
+    [weight in WeightClass]?: { min: string | number; max: string | number }; // alguns têm "Acima" ou "de"
   };
 };
 
@@ -43,134 +39,82 @@ export const BELTS = [
 
 export const CATEGORIES_BY_AGE_WEIGHT: CategoryWeightMap = {
   Mirim: {
-    Galo: 17,
-    Pluma: 19,
-    Pena: 22,
-    Leve: 25,
-    Médio: 28,
-    'Meio-pesado': 31,
-    Pesado: 34,
-    'Super-pesado': 37,
-    'Pesadissimo A': 40,
-    'Pesadissimo B': 43,
-    'Pesadissimo C': 46,
+    Galo: { min: 15, max: 18 },
+    Pluma: { min: 19, max: 21 },
+    Pena: { min: 22, max: 24 },
+    Leve: { min: 25, max: 27 },
+    Médio: { min: 28, max: 30 },
+    'Meio-pesado': { min: 31, max: 33 },
+    Pesado: { min: 34, max: 36 },
+    'Super-pesado': { min: 37, max: 39 },
+    'Pesadissimo A': { min: 40, max: 42 },
+    'Pesadissimo B': { min: 43, max: 45 },
+    'Pesadissimo C': { min: 46, max: Infinity },
   },
   'Infantil A': {
-    Galo: 22,
-    Pluma: 25,
-    Pena: 28,
-    Leve: 31,
-    Médio: 34,
-    'Meio-pesado': 37,
-    Pesado: 40,
-    'Super-pesado': 43,
-    'Pesadissimo A': 46,
-    'Pesadissimo B': 49,
-    'Pesadissimo C': 52,
+    Galo: { min: 20, max: 24 },
+    Pluma: { min: 25, max: 27 },
+    Pena: { min: 28, max: 30 },
+    Leve: { min: 31, max: 33 },
+    Médio: { min: 34, max: 36 },
+    'Meio-pesado': { min: 37, max: 39 },
+    Pesado: { min: 40, max: 42 },
+    'Super-pesado': { min: 43, max: 45 },
+    'Pesadissimo A': { min: 46, max: 48 },
+    'Pesadissimo B': { min: 49, max: 51 },
+    'Pesadissimo C': { min: 52, max: Infinity },
   },
   'Infantil B': {
-    Galo: 28,
-    Pluma: 31,
-    Pena: 34,
-    Leve: 37,
-    Médio: 40,
-    'Meio-pesado': 43,
-    Pesado: 46,
-    'Super-pesado': 49,
-    'Pesadissimo A': 52,
-    'Pesadissimo B': 56,
-    'Pesadissimo C': 58,
+    Galo: { min: 29, max: 32 },
+    Pluma: { min: 33, max: 36 },
+    Pena: { min: 37, max: 39 },
+    Leve: { min: 40, max: 43 },
+    Médio: { min: 44, max: 46 },
+    'Meio-pesado': { min: 47, max: 49 },
+    Pesado: { min: 50, max: 52 },
+    'Super-pesado': { min: 53, max: 55 },
+    'Pesadissimo A': { min: 56, max: 58 },
+    'Pesadissimo B': { min: 59, max: 61 },
+    'Pesadissimo C': { min: 62, max: Infinity },
   },
   'Infanto Juvenil A': {
-    Galo: 33,
-    Pluma: 37,
-    Pena: 40,
-    Leve: 45,
-    Médio: 49,
-    'Meio-pesado': 53,
-    Pesado: 57,
-    'Super-pesado': 61,
-    'Pesadissimo A': 65,
-    'Pesadissimo B': 69,
-    'Pesadissimo C': 73,
+    Galo: { min: 32, max: 35 },
+    Pluma: { min: 36, max: 39 },
+    Pena: { min: 40, max: 43 },
+    Leve: { min: 44, max: 47 },
+    Médio: { min: 48, max: 51 },
+    'Meio-pesado': { min: 52, max: 55 },
+    Pesado: { min: 56, max: 59 },
+    'Super-pesado': { min: 60, max: 63 },
+    'Pesadissimo A': { min: 64, max: 67 },
+    'Pesadissimo B': { min: 68, max: 71 },
+    'Pesadissimo C': { min: 72, max: Infinity },
   },
   'Infanto Juvenil B': {
-    Galo: 42,
-    Pluma: 46,
-    Pena: 49,
-    Leve: 53,
-    Médio: 58,
-    'Meio-pesado': 62,
-    Pesado: 66,
-    'Super-pesado': 70,
-    'Pesadissimo A': 74,
-    'Pesadissimo B': 78,
-    'Pesadissimo C': 82,
+    Galo: { min: 36, max: 39 },
+    Pluma: { min: 40, max: 43 },
+    Pena: { min: 44, max: 47 },
+    Leve: { min: 48, max: 51 },
+    Médio: { min: 52, max: 55 },
+    'Meio-pesado': { min: 56, max: 59 },
+    Pesado: { min: 60, max: 63 },
+    'Super-pesado': { min: 64, max: 67 },
+    'Pesadissimo A': { min: 68, max: 71 },
+    'Pesadissimo B': { min: 72, max: 75 },
+    'Pesadissimo C': { min: 76, max: Infinity },
   },
   Juvenil: {
-    Galo: 51,
-    Pluma: 56,
-    Pena: 60,
-    Leve: 64,
-    Médio: 69,
-    'Meio-pesado': 73,
-    Pesado: 77,
-    'Super-pesado': 82,
-    'Pesadissimo A': 'Acima',
-    'Pesadissimo B': 'de',
-    'Pesadissimo C': 86,
-  },
-  Adulto: {
-    Galo: 55,
-    Pluma: 61,
-    Pena: 67,
-    Leve: 73,
-    Médio: 79,
-    'Meio-pesado': 85,
-    Pesado: 91,
-    'Super-pesado': 97,
-    'Pesadissimo A': 'Acima',
-    'Pesadissimo B': 'de',
-    'Pesadissimo C': 97,
-  },
-  Master: {
-    Galo: 55,
-    Pluma: 61,
-    Pena: 67,
-    Leve: 73,
-    Médio: 79,
-    'Meio-pesado': 85,
-    Pesado: 91,
-    'Super-pesado': 97,
-    'Pesadissimo A': 'Acima',
-    'Pesadissimo B': 'de',
-    'Pesadissimo C': 97,
-  },
-  Senior: {
-    Galo: 55,
-    Pluma: 61,
-    Pena: 67,
-    Leve: 73,
-    Médio: 79,
-    'Meio-pesado': 85,
-    Pesado: 91,
-    'Super-pesado': 97,
-    'Pesadissimo A': 'Acima',
-    'Pesadissimo B': 'de',
-    'Pesadissimo C': 97,
-  },
-  'Super Senior': {
-    Galo: 55,
-    Pluma: 61,
-    Pena: 67,
-    Leve: 73,
-    Médio: 79,
-    'Meio-pesado': 85,
-    Pesado: 91,
-    'Super-pesado': 97,
-    'Pesadissimo A': 'Acima',
-    'Pesadissimo B': 'de',
-    'Pesadissimo C': 97,
+    Galo: { min: 50, max: 54 },
+    Pluma: { min: 55, max: 59 },
+    Pena: { min: 60, max: 64 },
+    Leve: { min: 65, max: 68 },
+    Médio: { min: 69, max: 72 },
+    'Meio-pesado': { min: 73, max: 76 },
+    Pesado: { min: 77, max: 81 },
+    'Super-pesado': { min: 82, max: 85 },
+    'Pesadissimo A': { min: 86, max: 90 },
+    'Pesadissimo B': { min: 91, max: 95 },
+    'Pesadissimo C': { min: 96, max: Infinity },
   },
 };
 
@@ -181,10 +125,10 @@ export enum AgeDivision {
   INFANTO_JUVENIL_A = 'Infanto Juvenil A', // 12 e 13 anos
   INFANTO_JUVENIL_B = 'Infanto Juvenil B', // 14 e 15 anos
   JUVENIL = 'Juvenil', // 16 e 17 anos
-  ADULTO = 'Adulto', // 18 a 29 anos
-  MASTER = 'Master', // 30 a 34 anos
-  SENIOR = 'Senior', // 35 a 39 anos
-  SUPER_SENIOR = 'Super Senior', // 40 anos ou mais
+  // ADULTO = 'Adulto', // 18 a 29 anos
+  // MASTER = 'Master', // 30 a 34 anos
+  // SENIOR = 'Senior', // 35 a 39 anos
+  // SUPER_SENIOR = 'Super Senior', // 40 anos ou mais
 }
 
 export type AgeDivisionRange = {
@@ -194,20 +138,19 @@ export type AgeDivisionRange = {
 };
 
 const divisions = [
-  { min: 6, max: 7, division: AgeDivision.MIRIM },
-  { min: 8, max: 9, division: AgeDivision.INFANTIL_A },
-  { min: 10, max: 11, division: AgeDivision.INFANTIL_B },
+  { min: 4, max: 7, division: AgeDivision.MIRIM }, // Added range for 4-5 years
+  { min: 8, max: 14, division: AgeDivision.INFANTO_JUVENIL_A },
+  { min: 15, max: 17, division: AgeDivision.JUVENIL },
   { min: 12, max: 13, division: AgeDivision.INFANTO_JUVENIL_A },
   { min: 14, max: 15, division: AgeDivision.INFANTO_JUVENIL_B },
   { min: 16, max: 17, division: AgeDivision.JUVENIL },
-  { min: 18, max: 29, division: AgeDivision.ADULTO },
-  { min: 30, max: 34, division: AgeDivision.MASTER },
-  { min: 35, max: 39, division: AgeDivision.SENIOR },
-  { min: 40, max: Infinity, division: AgeDivision.SUPER_SENIOR },
+  // { min: 18, max: 29, division: AgeDivision.ADULTO },
+  // { min: 30, max: 34, division: AgeDivision.MASTER },
+  // { min: 35, max: 39, division: AgeDivision.SENIOR },
+  // { min: 40, max: Infinity, division: AgeDivision.SUPER_SENIOR },
 ];
 
 export function getDivisionByAge(age: number): AgeDivisionRange | null {
-  console.log('Getting division for age:', age);
   return divisions.find((d) => age >= d.min && age <= d.max) || null;
 }
 
@@ -244,10 +187,10 @@ const beltsForCategory: { [key in AgeDivision]: string[] } = {
     'Verde',
     'Azul',
   ],
-  [AgeDivision.ADULTO]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
-  [AgeDivision.MASTER]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
-  [AgeDivision.SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
-  [AgeDivision.SUPER_SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  // [AgeDivision.ADULTO]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  // [AgeDivision.MASTER]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  // [AgeDivision.SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  // [AgeDivision.SUPER_SENIOR]: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
 };
 
 export function getBeltsForCategory(ageDivision: AgeDivision): string[] {

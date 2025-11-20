@@ -2217,6 +2217,11 @@ hsl-to-rgb-for-reals@^1.1.0:
   resolved "https://registry.yarnpkg.com/hsl-to-rgb-for-reals/-/hsl-to-rgb-for-reals-1.1.1.tgz#e1eb23f6b78016e3722431df68197e6dcdc016d9"
   integrity sha512-LgOWAkrN0rFaQpfdWBQlv/VhkOxb5AsBjk6NQVx4yEzWS923T07X0M1Y0VNko2H52HeSpZrZNNMJ0aFqsdVzQg==
 
+html-to-pdfmake@^2.5.32:
+  version "2.5.32"
+  resolved "https://registry.yarnpkg.com/html-to-pdfmake/-/html-to-pdfmake-2.5.32.tgz#f563665342c7bebb0a1b9ff53c534908f91731cc"
+  integrity sha512-bymHFRh2Dfb/HhfRoBK1td8HlMomc7z3K2lpm2oAJLRwvjMa0T/sZvqm2bq+IeI8y357TzPgf2jeAfzIeMTk0Q==
+
 hyphen@^1.6.4:
   version "1.10.6"
   resolved "https://registry.yarnpkg.com/hyphen/-/hyphen-1.10.6.tgz#0e779d280e696102b97d7e42f5ca5de2cc97e274"

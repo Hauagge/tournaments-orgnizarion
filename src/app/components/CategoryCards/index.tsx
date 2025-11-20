@@ -17,10 +17,13 @@ export default function CardCategory({
   searchTerm = '',
 }: BracketsPageProps) {
   const router = useRouter();
+  const onlyCategoriesNotEmpty = categories.filter(
+    (category) => category.athletes && category.athletes.length > 0,
+  );
   return (
     <div className="space-y-4 max-h-full overflow-y-auto flex-1">
       <h2 className="text-xl font-bold text-center">{categoryName}</h2>
-      {categories
+      {onlyCategoriesNotEmpty
         .filter((category) =>
           category.name.toLowerCase().includes(searchTerm.toLowerCase()),
         )
@@ -41,7 +44,7 @@ export default function CardCategory({
               <p>
                 Peso: {category?.minWeight} kg - {category?.maxWeight} kg
               </p>
-              <p>{category.athletes?.length - 1 || 0} lutas</p>
+              <p>{category.athletes?.length || 0} Atletas</p>
             </CardContent>
           </Card>
         ))}

@@ -21,8 +21,8 @@ export type Athlete = {
 };
 
 export enum GenderEnum {
-  Masculino = 'M',
-  Feminino = 'F',
+  MAS = 'M',
+  FEM = 'F',
 }
 
 export enum BeltsEnum {

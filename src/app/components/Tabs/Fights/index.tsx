@@ -24,11 +24,11 @@ export default function BracketsPage() {
                     {category?.athletes?.length &&
                       category?.athletes?.length > 0 && (
                         <div className="flex justify-between border p-2 rounded">
-                          <span>{category?.athletes[0].name}</span>
+                          <span>{category?.athletes[0]?.name}</span>
                           <span className="font-semibold text-gray-500">
                             vs
                           </span>
-                          <span>{category?.athletes[1].name}</span>
+                          <span>{category?.athletes[1]?.name}</span>
                         </div>
                       )}
                   </div>
