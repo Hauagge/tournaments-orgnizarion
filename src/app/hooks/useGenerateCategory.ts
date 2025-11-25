@@ -31,7 +31,7 @@ export const useGenerateCategories = () => {
               },
               weightName,
               maxWeight: Number(maxWeight),
-              fights: [],
+              athletes: [],
             });
           });
         });

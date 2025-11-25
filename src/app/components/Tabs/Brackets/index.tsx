@@ -7,10 +7,33 @@ import { useAthleteStore } from '@/app/store/useAthleteStore';
 import { Button } from '../../ui/button';
 import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateAthletesCustomaCategory';
 import { ExportCategoriesPdfButton } from '../../exportPdfButton';
+import { Athlete, Category } from '@/app/types';
+
+const MAX_PER_CATEGORY = 4;
+
+function athleteKey(a: Athlete) {
+  return String(a.id ?? `${a.name}|${a.age}|${a.gender}|${a.belt}|${a.weight}`);
+}
+
+function updateBounds(c: Category) {
+  const ws = c.athletes.map((a) => Number(a.weight));
+  c.minWeight = ws.length ? Math.min(...ws) : 0;
+  c.maxWeight = ws.length ? Math.max(...ws) : 0;
+  c.weightName =
+    c.minWeight === c.maxWeight
+      ? `${c.minWeight}kg`
+      : `${c.minWeight}–${c.maxWeight}kg`;
+  const ages = c.athletes.map((a) => a.age);
+  if (ages.length) {
+    c.ageDivision.min = Math.min(c.ageDivision.min, ...ages);
+    c.ageDivision.max = Math.max(c.ageDivision.max, ...ages);
+  }
+}
 
 export default function BracketTabs() {
   const [searchTerm, setSearchTerm] = useState('');
-  const { categories, updateFightsFromAthletes } = useCategoryStore();
+  const { categories, setCategories, updateFightsFromAthletes } =
+    useCategoryStore();
   const { athletes } = useAthleteStore();
   const [generating, setGenerating] = useState(false);
 
@@ -24,6 +47,45 @@ export default function BracketTabs() {
       setGenerating(false);
     }
   }
+
+  function removeAthleteEverywhere(next: Category[], key: string) {
+    for (const c of next) {
+      const idx = c.athletes.findIndex((a) => athleteKey(a) === key);
+      if (idx !== -1) {
+        c.athletes.splice(idx, 1);
+        updateBounds(c);
+      }
+    }
+  }
+
+  function handleAddAthlete(categoryId: number, a: Athlete) {
+    const next: Category[] = JSON.parse(JSON.stringify(categories));
+    const key = athleteKey(a);
+    // remove de qualquer outra categoria
+    removeAthleteEverywhere(next, key);
+    // adiciona no destino se houver espaço
+    const dest = next.find((c) => c.id === categoryId);
+    if (!dest) return;
+    if (dest.athletes.length >= MAX_PER_CATEGORY) return;
+    dest.athletes.push(a);
+    updateBounds(dest);
+    // reindex opcional (se você quiser reatribuir ids sequenciais): next.forEach((c, i)=> c.id = i+1)
+    setCategories?.(next); // certifique-se de ter esse action no store
+  }
+
+  function handleRemoveAthlete(categoryId: number, a: Athlete) {
+    const next: Category[] = JSON.parse(JSON.stringify(categories));
+    const key = athleteKey(a);
+    const dest = next.find((c) => c.id === categoryId);
+    if (!dest) return;
+    const idx = dest.athletes.findIndex((it) => athleteKey(it) === key);
+    if (idx !== -1) {
+      dest.athletes.splice(idx, 1);
+      updateBounds(dest);
+      setCategories?.(next);
+    }
+  }
+
   return (
     <TabsContent value="chaves">
       <div className="  space-y-6">
@@ -57,11 +119,19 @@ export default function BracketTabs() {
               categoryName={'🧒 Infantil'}
               categories={infantil}
               searchTerm={searchTerm}
+              athletesPool={athletes}
+              onAdd={handleAddAthlete}
+              onRemove={handleRemoveAthlete}
+              maxPerCategory={MAX_PER_CATEGORY}
             />
             <CardCategory
               categoryName={'👦 Juvenil'}
               categories={juvenil}
               searchTerm={searchTerm}
+              athletesPool={athletes}
+              onAdd={handleAddAthlete}
+              onRemove={handleRemoveAthlete}
+              maxPerCategory={MAX_PER_CATEGORY}
             />
           </div>
         ) : (

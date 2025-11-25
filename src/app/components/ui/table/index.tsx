@@ -73,16 +73,10 @@ export function TableHead({
   onClick,
   onKeyDown,
   tabIndex,
-  ...rest
+  ...props
 }: TableHeadProps) {
   // Normaliza aria-sort caso venha como 'asc' | 'desc'
-  const ariaSortRaw = (rest as any)['aria-sort'];
-  const ariaSortNormalized =
-    ariaSortRaw === 'asc'
-      ? 'ascending'
-      : ariaSortRaw === 'desc'
-      ? 'descending'
-      : ariaSortRaw;
+  const { ['aria-sort']: ariaSortRaw, ...rest } = props;
 
   // Permite ativar ordenação via teclado (Enter/Espaço)
   const clickable = typeof onClick === 'function';
@@ -92,19 +86,31 @@ export function TableHead({
     if (!clickable) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      (onClick as any)?.(e);
+      onClick?.(e as unknown as React.MouseEvent<HTMLTableCellElement>);
     }
     onKeyDown?.(e);
   };
 
-  const restWithoutAriaSort = { ...rest } as any;
-  delete restWithoutAriaSort['aria-sort'];
-
+  const ariaSortValue = ariaSortRaw as string | undefined;
+  const ariaSortNormalized:
+    | 'ascending'
+    | 'descending'
+    | 'none'
+    | 'other'
+    | undefined =
+    ariaSortValue === 'asc' || ariaSortValue === 'ascending'
+      ? 'ascending'
+      : ariaSortValue === 'desc' || ariaSortValue === 'descending'
+      ? 'descending'
+      : ariaSortValue === 'none' || ariaSortValue === 'other'
+      ? (ariaSortValue as 'none' | 'other')
+      : undefined;
   return (
     <th
       scope="col"
       role="columnheader"
-      aria-sort={ariaSortNormalized as React.AriaAttributes['aria-sort']}
+      aria-sort={ariaSortNormalized}
+      {...rest}
       className={cx(
         'px-4 py-2 text-left text-sm font-semibold text-gray-700',
         clickable &&
@@ -114,7 +120,6 @@ export function TableHead({
       tabIndex={clickable ? tabIndex ?? 0 : tabIndex}
       onClick={onClick}
       onKeyDown={handleKeyDown}
-      {...restWithoutAriaSort}
     >
       {children}
     </th>

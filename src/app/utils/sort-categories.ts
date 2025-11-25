@@ -1,4 +1,4 @@
-import { Athlete } from '../dashboard';
+import { Athlete } from '../types';
 
 export function sortCategories(categories: string[], athletes: Array<Athlete>) {
   return categories.sort((a, b) => {
