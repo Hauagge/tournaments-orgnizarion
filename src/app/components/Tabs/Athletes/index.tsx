@@ -279,15 +279,15 @@ export default function AthleteTabs({
                         <SelectTrigger>
                           <p>
                             {newAthlete.gender
-                              ? newAthlete.gender === 'M'
+                              ? newAthlete.gender === GenderEnum.MAS
                                 ? 'Masculino'
                                 : 'Feminino'
                               : 'Gênero'}
                           </p>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="M">Masculino</SelectItem>
-                          <SelectItem value="F">Feminino</SelectItem>
+                          <SelectItem value="MAS">Masculino</SelectItem>
+                          <SelectItem value="FEM">Feminino</SelectItem>
                         </SelectContent>
                       </Select>
 

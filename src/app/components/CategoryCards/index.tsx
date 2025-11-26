@@ -5,7 +5,7 @@ import { Card, CardContent } from '../ui/card';
 import { Athlete, Category } from '@/app/types';
 import { useMemo, useState } from 'react';
 import { Button } from '../ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, Trash2, X } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -26,6 +26,7 @@ type BracketsPageProps = {
   athletesPool?: Athlete[];
   onAdd?: (categoryId: number, athlete: Athlete) => void;
   onRemove?: (categoryId: number, athlete: Athlete) => void;
+  onRemoveCategory?: (categoryId: number) => void; // 👈 NOVO
 };
 
 function athleteKey(a: Athlete) {
@@ -40,21 +41,27 @@ export default function CardCategory({
   maxPerCategory = 4,
   onAdd,
   onRemove,
+  onRemoveCategory, // 👈 NOVO
 }: BracketsPageProps) {
   // const router = useRouter();
-  const onlyCategoriesNotEmpty = categories
-    .filter((category) => category.athletes && category.athletes.length > 0)
-    .sort((a, b) => a.id - b.id);
+  // const onlyCategoriesNotEmpty = categories
+  //   .filter((category) => category.athletes && category.athletes.length > 0)
+  //   .sort((a, b) => a.id - b.id);
+
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.id - b.id),
+    [categories],
+  );
 
   const [openFor, setOpenFor] = useState<number | null>(null);
   const [query, setQuery] = useState('');
 
   const filteredByCatName = useMemo(
     () =>
-      onlyCategoriesNotEmpty.filter((category) =>
+      sortedCategories.filter((category) =>
         category.name.toLowerCase().includes(searchTerm.toLowerCase()),
       ),
-    [onlyCategoriesNotEmpty, searchTerm],
+    [sortedCategories, searchTerm],
   );
 
   const suggestions = useMemo(() => {
@@ -89,6 +96,7 @@ export default function CardCategory({
 
       {filteredByCatName.map((category) => {
         const full = category.athletes.length >= maxPerCategory;
+        const empty = category.athletes.length === 0;
         return (
           <Card key={category.id} className="hover:shadow-lg">
             <CardContent className="space-y-2 py-4">
@@ -110,6 +118,21 @@ export default function CardCategory({
                   <span className="text-sm text-muted-foreground">
                     {category.athletes.length}/{maxPerCategory}
                   </span>
+                  {empty && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        if (confirm('Remover esta categoria vazia?')) {
+                          onRemoveCategory?.(category.id);
+                        }
+                      }}
+                      title="Remover categoria vazia"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Remover categoria
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"

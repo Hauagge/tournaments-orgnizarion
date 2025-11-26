@@ -1,6 +1,8 @@
 import { getDivisionByAge } from '../components/enums/category';
 import { Athlete, BeltsEnum, Category } from '../types';
 
+//@@TODO implementar lógica para permitir configurar diferença máxima de peso, idade e mesclagem de faixa  via config do campeonato
+
 export function groupAthletes(athletes: Athlete[]): {
   categories: Category[];
   disqualified: Athlete[];

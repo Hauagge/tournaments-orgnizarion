@@ -86,6 +86,17 @@ export default function BracketTabs() {
     }
   }
 
+  function handleRemoveCategory(categoryId: number) {
+    const next: Category[] = JSON.parse(JSON.stringify(categories));
+    const cat = next.find((c) => c.id === categoryId);
+    if (!cat) return;
+    if (cat.athletes.length > 0) return; // opção só quando vazia
+    const filtered = next.filter((c) => c.id !== categoryId);
+    // opcional: reindexar IDs
+    filtered.forEach((c, i) => (c.id = i + 1));
+    setCategories?.(filtered);
+  }
+
   return (
     <TabsContent value="chaves">
       <div className="  space-y-6">
@@ -122,6 +133,7 @@ export default function BracketTabs() {
               athletesPool={athletes}
               onAdd={handleAddAthlete}
               onRemove={handleRemoveAthlete}
+              onRemoveCategory={handleRemoveCategory}
               maxPerCategory={MAX_PER_CATEGORY}
             />
             <CardCategory
@@ -131,6 +143,7 @@ export default function BracketTabs() {
               athletesPool={athletes}
               onAdd={handleAddAthlete}
               onRemove={handleRemoveAthlete}
+              onRemoveCategory={handleRemoveCategory}
               maxPerCategory={MAX_PER_CATEGORY}
             />
           </div>
