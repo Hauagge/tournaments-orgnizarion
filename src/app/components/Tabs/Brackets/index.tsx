@@ -100,30 +100,31 @@ export default function BracketTabs() {
   return (
     <TabsContent value="chaves">
       <div className="  space-y-6">
-        <div className="flex items-center gap-2 px-4">
-          <ExportCategoriesPdfButton />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 px-4">
+            <ExportCategoriesPdfButton />
 
-          <input
-            type="text"
-            placeholder="Buscar categoria..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="ml-auto border px-2 py-1 rounded text-sm w-64"
-          />
+            <input
+              type="text"
+              placeholder="Buscar categoria..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="ml-auto border px-2 py-1 rounded text-sm w-64"
+            />
+          </div>
+          <Button
+            onClick={handleGenerate}
+            disabled={generating || athletes.length === 0}
+            className="ml-0 sm:ml-2 max-w-32"
+            title={
+              athletes.length === 0
+                ? 'Adicione atletas para gerar chaves'
+                : 'Gerar chaves das lutas'
+            }
+          >
+            {generating ? 'Gerando...' : 'Gerar todas as chaves'}
+          </Button>
         </div>
-        <Button
-          size="xl"
-          onClick={handleGenerate}
-          disabled={generating || athletes.length === 0}
-          className="ml-0 sm:ml-2"
-          title={
-            athletes.length === 0
-              ? 'Adicione atletas para gerar chaves'
-              : 'Gerar chaves das lutas'
-          }
-        >
-          {generating ? 'Gerando...' : 'Gerar todas as chaves'}
-        </Button>
         {categories.length > 0 ? (
           <div className=" h-[85vh] flex flex-col lg:flex-row gap-6 flex-wrap max-w-screen overflow-hidden ">
             <CardCategory

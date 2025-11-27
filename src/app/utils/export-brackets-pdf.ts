@@ -6,6 +6,16 @@ import { Category } from '@/app/types';
 type TableColumns = 'idx' | 'name' | 'academy' | 'age' | 'weight' | 'belt';
 type Options = { landscape?: boolean; columns?: TableColumns[] };
 
+async function loadBase64Image(url: string): Promise<string> {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
+  });
+}
+
 function getBracketNames(category: Category): string[] {
   const names = (category.athletes ?? []).map((a) => a.name);
   while (names.length < 4) names.push('W.O.');
@@ -216,7 +226,7 @@ function buildSemifinalsLikeHtmlBlock(category: Category) {
   ];
 }
 
-export function exportAllBracketsPdf(
+export async function exportAllBracketsPdf(
   categories: Category[],
   opts: Options = {},
 ) {
@@ -231,7 +241,7 @@ export function exportAllBracketsPdf(
   ];
 
   const content: any[] = [];
-
+  const logoBase64 = await loadBase64Image('/logo-preview.png');
   categories.forEach((category, pageIdx) => {
     // Cabeçalho da categoria
     content.push(
@@ -290,7 +300,26 @@ export function exportAllBracketsPdf(
   const docDefinition: any = {
     pageSize: 'A4',
     pageOrientation: opts.landscape ? 'landscape' : 'portrait',
-    pageMargins: [28, 28, 28, 34],
+    pageMargins: [28, 70, 28, 34],
+    header: {
+      margin: [28, 10, 28, 0],
+      columns: [
+        {
+          image: 'logo', // referência definida em "images"
+          width: 120,
+          margin: [0, 0, 0, 0],
+        },
+        {
+          text: 'IV COPA KIDS',
+          style: 'eventTitle',
+          alignment: 'center',
+          margin: [0, 10, 0, 0],
+        },
+        {
+          text: '', // coluna vazia só pra balancear o layout
+        },
+      ],
+    },
     content,
     styles: {
       th: { bold: true, fontSize: 10, fillColor: '#F6F6F6' },
@@ -303,6 +332,10 @@ export function exportAllBracketsPdf(
       finalTitle: { fontSize: 12, bold: true },
       podium: { fontSize: 10 },
       footerText: { fontSize: 8, color: '#777' },
+      eventTitle: { fontSize: 18, bold: true },
+    },
+    images: {
+      logo: logoBase64,
     },
     defaultStyle: { fontSize: 10 },
   };

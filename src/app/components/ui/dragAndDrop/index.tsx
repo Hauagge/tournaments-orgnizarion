@@ -18,7 +18,7 @@ export function DragAndDrop({ handleFileUpload }: DragAndDropProps) {
   };
 
   return (
-    <div className="flex items-center justify-center w-full">
+    <div className="">
       <label
         htmlFor="dropzone-file"
         className="flex flex-col items-center justify-center w-full h-25 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
@@ -47,7 +47,9 @@ export function DragAndDrop({ handleFileUpload }: DragAndDropProps) {
                 <span className="font-semibold">Clique para enviar</span> ou
                 arraste e solte
               </p>
-              <p className="text-xs text-gray-500">ARQUIVO EXCEL (MAX. 10MB)</p>
+              <p className="text-xs text-gray-500">
+                ARQUIVO NO FORMATO CSV (MAX. 10MB)
+              </p>
             </>
           )}
         </div>

@@ -8,10 +8,11 @@ export function ExportCategoriesPdfButton() {
 
   return (
     <Button
+      size="xl"
       onClick={exportAll}
-      className="bg-red-600 hover:bg-red-500 text-white"
+      className="bg-red-600 hover:bg-red-500 text-white h-10"
     >
-      Exportar PDF de todas as categorias
+      Exportar PDF
     </Button>
   );
 }

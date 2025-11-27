@@ -34,6 +34,20 @@ import {
   DialogClose,
 } from '../../ui/dialog';
 import { useDebouncedValue } from '@/app/hooks/useDebouncedValue';
+import { buildAthletePatch } from '@/app/utils/buildAthletePatch';
+import { useToast } from '../../ui/use-toast';
+import { useCategoryStore } from '@/app/store/useCategoryStore';
+import { Trash2, Pen } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../ui/alertDialog';
 
 type AthleteTabProps = {
   newAthlete: Athlete;
@@ -43,15 +57,26 @@ type AthleteTabProps = {
 type SortKey = 'name' | 'age' | 'belt' | 'category' | 'weight';
 type SortDir = 'asc' | 'desc';
 
+type Mode = 'create' | 'edit';
+type ToastPayload = { title?: string; description?: string };
 export default function AthleteTabs({
   newAthlete,
   setNewAthlete,
 }: AthleteTabProps) {
-  const { athletes, addAthlete } = useAthleteStore();
+  const { athletes, addAthlete, updateAthletePartial, deleteAthlete } =
+    useAthleteStore();
   const { handleFileUpload } = useImportAthletes();
+  const { removeFromCategory } = useCategoryStore();
+  const { toast } = useToast?.() ?? {
+    toast: (x: ToastPayload) => alert(x?.description || x?.title || 'OK'),
+  };
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<Mode>('create');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [athleteToDelete, setAthleteToDelete] = useState<Athlete | null>(null);
 
   // ---- Ordenação ----
   const [sortKey, setSortKey] = useState<SortKey>('name');
@@ -98,14 +123,116 @@ export default function AthleteTabs({
     e?.preventDefault();
     if (!canSave) return;
 
+    if (Number(newAthlete.age) <= 0) {
+      return toast({
+        title: 'Idade inválida',
+        description: 'Idade deve ser maior que 0.',
+      });
+    }
+    if (Number(newAthlete.weight) <= 0) {
+      return toast({
+        title: 'Peso inválido',
+        description: 'Peso deve ser maior que 0.',
+      });
+    }
+
     setSaving(true);
-    addAthlete({
-      ...newAthlete,
-      weight: Number(newAthlete.weight),
+    try {
+      if (mode === 'create') {
+        addAthlete({
+          ...newAthlete,
+          weight: Number(newAthlete.weight),
+        });
+
+        toast({
+          title: 'Atleta adicionado',
+          description: `${newAthlete.name} foi cadastrado com sucesso.`,
+        });
+      } else {
+        if (!editingId) return;
+        const current = athletes.find((a) => a.id === editingId);
+        if (!current) return;
+
+        const draft: Athlete = {
+          ...newAthlete,
+          id: editingId,
+          weight: Number(newAthlete.weight),
+        };
+        const patch = buildAthletePatch(current, draft);
+        if (Object.keys(patch).length === 0) {
+          toast({
+            title: 'Nenhuma alteração',
+            description: 'Nenhuma alteração foi feita no atleta.',
+          });
+          return;
+        }
+        updateAthletePartial(editingId, patch);
+
+        toast({
+          title: 'Atleta atualizado',
+          description: `${newAthlete.name} foi atualizado com sucesso.`,
+          variant: 'success',
+        });
+      }
+      resetForm();
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleEdit(athlete: Athlete) {
+    if (!athlete.id) return;
+    setMode('edit');
+    setEditingId(athlete.id ?? null);
+    setNewAthlete({
+      id: athlete.id ?? 0,
+      name: athlete.name,
+      belt: athlete.belt,
+      weight: Number(athlete.weight),
+      academy: athlete.academy || '',
+      category: {
+        name: athlete.category?.name || '',
+        minWeight: athlete.category?.minWeight ?? 0,
+        maxWeight: athlete.category?.maxWeight ?? 0,
+        maxAge: athlete.category?.maxAge ?? 0,
+        minAge: athlete.category?.minAge ?? 0,
+        belt: athlete.category?.belt || (athlete.belt ?? ''),
+      },
+      isApto: !!athlete.isApto,
+      status: athlete.status || 'Aguardando',
+      age: Number(athlete.age),
+      gender: athlete.gender || '',
     });
-    setSaving(false);
-    resetForm();
-    setOpen(false);
+    setOpen(true);
+  }
+
+  function requestDelete(a: Athlete) {
+    setAthleteToDelete(a);
+    setDeleteOpen(true);
+  }
+
+  function confirmDelete() {
+    if (!athleteToDelete?.id) {
+      setDeleteOpen(false);
+      setAthleteToDelete(null);
+      return;
+    }
+    // 1) remove do store de atletas
+    deleteAthlete(athleteToDelete.id);
+
+    // 2) remove das categorias
+    removeFromCategory(athleteToDelete.id);
+
+    // 3) feedback
+    toast({
+      title: 'Atleta excluído',
+      description: `${athleteToDelete.name} foi removido.`,
+      variant: 'success',
+    });
+
+    setDeleteOpen(false);
+    setAthleteToDelete(null);
   }
 
   function getValue(a: Athlete, key: SortKey) {
@@ -215,7 +342,9 @@ export default function AthleteTabs({
                 }}
               >
                 <DialogTrigger asChild>
-                  <Button>Novo atleta</Button>
+                  <Button>
+                    {mode === 'create' ? 'Novo atleta' : 'Editar atleta'}
+                  </Button>
                 </DialogTrigger>
 
                 <DialogContent
@@ -225,7 +354,9 @@ export default function AthleteTabs({
                  "
                 >
                   <DialogHeader>
-                    <DialogTitle>Cadastrar atleta</DialogTitle>
+                    <DialogTitle>
+                      {mode === 'create' ? 'Cadastrar atleta' : 'Editar atleta'}
+                    </DialogTitle>
                   </DialogHeader>
 
                   {/* Formulário do modal */}
@@ -361,7 +492,11 @@ export default function AthleteTabs({
                         </Button>
                       </DialogClose>
                       <Button type="submit" disabled={!canSave || saving}>
-                        {saving ? 'Salvando...' : 'Salvar atleta'}
+                        {saving
+                          ? 'Salvando...'
+                          : mode === 'create'
+                          ? 'Salvar atleta'
+                          : 'Salvar alterações'}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -467,6 +602,7 @@ export default function AthleteTabs({
                     <span>Categoria</span> <SortIndicator col="category" />
                   </div>
                 </TableHead>
+                <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -484,6 +620,27 @@ export default function AthleteTabs({
                   </TableCell>
                   <TableCell>{a.academy}</TableCell>
                   <TableCell>{a.category?.name}</TableCell>
+                  <TableCell className="gap-y-1.5 flex flex-col">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleEdit(a)}
+                      title="Editar"
+                    >
+                      <Pen className="h-4 w-4 mr-1" />
+                      Editar
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => requestDelete(a)}
+                      title="Excluir"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Excluir
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -531,6 +688,24 @@ export default function AthleteTabs({
               </Button>
             </div>
           </div>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir atleta</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja excluir{' '}
+                  <strong>{athleteToDelete?.name}</strong>? Esta ação removerá o
+                  atleta também de quaisquer categorias.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>
+                  Excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </TabsContent>
