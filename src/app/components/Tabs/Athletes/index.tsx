@@ -48,6 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../ui/alertDialog';
+import ClearStorageButton from '../../ui/clear-storage-button';
 
 type AthleteTabProps = {
   newAthlete: Athlete;
@@ -505,6 +506,8 @@ export default function AthleteTabs({
 
               {/* Importação em massa permanece disponível */}
               <DragAndDrop handleFileUpload={handleFileUpload} />
+
+              <ClearStorageButton />
             </div>
 
             {/* Barra de ferramentas direita: Busca + Linhas por página */}

@@ -8,6 +8,7 @@ import { Button } from '../../ui/button';
 import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateAthletesCustomaCategory';
 import { ExportCategoriesPdfButton } from '../../exportPdfButton';
 import { Athlete, Category } from '@/app/types';
+import ClearStorageButton from '../../ui/clear-storage-button';
 
 const MAX_PER_CATEGORY = 4;
 
@@ -103,7 +104,7 @@ export default function BracketTabs() {
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 px-4">
             <ExportCategoriesPdfButton />
-
+            <ClearStorageButton />
             <input
               type="text"
               placeholder="Buscar categoria..."
