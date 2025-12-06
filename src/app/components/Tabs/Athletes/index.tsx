@@ -143,6 +143,10 @@ export default function AthleteTabs({
         addAthlete({
           ...newAthlete,
           weight: Number(newAthlete.weight),
+          id:
+            athletes.length > 0
+              ? Math.max(...athletes.map((a) => a.id || 0)) + 1
+              : 1,
         });
 
         toast({
