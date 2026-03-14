@@ -1,4 +1,4 @@
-import { Category } from '../types';
+import { Category } from '@/shared/lib/types';
 
 export const useSeparateBracketByAgeGroup = (categories: Category[]) => {
   type AgeGroup = 'INFANTIL' | 'JUVENIL';

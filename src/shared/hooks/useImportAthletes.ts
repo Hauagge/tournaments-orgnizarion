@@ -4,18 +4,9 @@ import Papa from 'papaparse';
 import {
   CATEGORIES_BY_AGE_WEIGHT,
   getDivisionByAge,
-} from '../components/enums/category';
-import { Athlete, BeltsEnum, GenderEnum } from '../types';
-import { useAthleteStore } from '../store/useAthleteStore';
-export type CategoryMap = {
-  name: string;
-  minWeight: number;
-  maxWeight: number;
-  maxAge?: number;
-  minAge?: number;
-  belt: BeltsEnum | '';
-  gender?: GenderEnum | '';
-};
+} from '@/features/categories/lib/category';
+import { Athlete, BeltsEnum, CategoryMap, GenderEnum } from '@/shared/lib/types';
+import { useAthleteStore } from '@/shared/stores/useAthleteStore';
 
 export type AthletePropsCSV = {
   Nome: string;
@@ -59,7 +50,7 @@ export const useImportAthletes = () => {
           : [];
 
         const matchingCategory = sortedCategories.find(
-          ([_, weight]) => +weight <= +weight.max && +weight >= +weight.min,
+          ([_, limits]) => weight >= Number(limits.min) && weight <= Number(limits.max),
         );
 
         const category: CategoryMap | null = matchingCategory

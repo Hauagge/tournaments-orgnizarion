@@ -2,13 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Button } from '@/app/components/ui/button';
-import { useCategoryStore } from '@/app/store/useCategoryStore';
-import { Athlete } from '@/app/types';
-import Round from '@/app/components/Rounds';
-import { exportAllBracketsPdf } from '@/app/utils/export-brackets-pdf';
-
-export type WinnerMap = Record<number, string | null>;
+import { Button } from '@/shared/ui/button';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
+import { Athlete } from '@/shared/lib/types';
+import Round, { WinnerMap } from '@/features/categories/components/rounds';
+import { exportAllBracketsPdf } from '@/shared/lib/export-brackets-pdf';
 
 export default function CategoryPage() {
   const router = useRouter();
@@ -42,7 +40,7 @@ export default function CategoryPage() {
             Verifique o nome da categoria ou retorne para a lista de chaves.
           </p>
         </div>
-        <Button onClick={() => router.back()}>← Voltar</Button>
+        <Button onClick={() => router.back()}>Voltar</Button>
       </div>
     );
   }
@@ -91,7 +89,7 @@ export default function CategoryPage() {
               variant="secondary"
               onClick={() => router.back()}
             >
-              ← Voltar
+              Voltar
             </Button>
             <Button
               className="bg-red-600 hover:bg-red-500 text-white"

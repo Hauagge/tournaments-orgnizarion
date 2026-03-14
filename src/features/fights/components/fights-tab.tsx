@@ -1,15 +1,19 @@
 'use client';
 
-import { useCategoryStore } from '@/app/store/useCategoryStore';
-import { Card, CardContent } from '../../ui/card';
-import { TabsContent } from '../../ui/tabs';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
+import { Card, CardContent } from '@/shared/ui/card';
 
-export default function BracketsPage() {
+export default function FightsTab() {
   const { categories } = useCategoryStore();
   return (
-    <TabsContent value="lutas">
+    <section className="space-y-4">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Fights</h1>
+        <p className="mt-1 text-slate-600">
+          Visualizacao rapida das lutas derivadas das categorias montadas.
+        </p>
+      </header>
       <div className="p-6 space-y-6">
-        <h1 className="text-3xl font-bold text-center">Chaves de Lutas</h1>
         {categories.length === 0 ? (
           <p className="text-center">Nenhuma chave gerada ainda.</p>
         ) : (
@@ -38,6 +42,6 @@ export default function BracketsPage() {
           </div>
         )}
       </div>
-    </TabsContent>
+    </section>
   );
 }

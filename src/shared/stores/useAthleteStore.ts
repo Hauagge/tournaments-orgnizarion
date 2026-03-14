@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Athlete } from '../types';
-import { DeepPartial } from '../utils/buildAthletePatch';
+import { Athlete } from '@/shared/lib/types';
+import { DeepPartial } from '@/shared/lib/buildAthletePatch';
 
 type AthleteStore = {
   athletes: Athlete[];

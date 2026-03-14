@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button } from '../../ui/button';
-import { Card, CardContent } from '../../ui/card';
-import { Input } from '../../ui/input';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Input } from '@/shared/ui/input';
 import {
   Table,
   TableHeader,
@@ -11,16 +11,15 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from '../../ui/table';
-import { TabsContent } from '../../ui/tabs';
-import { useAthleteStore } from '@/app/store/useAthleteStore';
-import { Athlete, BeltsEnum, GenderEnum } from '@/app/types';
+} from '@/shared/ui/table';
+import { useAthleteStore } from '@/shared/stores/useAthleteStore';
+import { Athlete, BeltsEnum, GenderEnum } from '@/shared/lib/types';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from '../../ui/select';
+} from '@/shared/ui/select';
 
 import {
   Dialog,
@@ -29,11 +28,11 @@ import {
   DialogTitle,
   DialogFooter,
   DialogClose,
-} from '../../ui/dialog';
-import { useDebouncedValue } from '@/app/hooks/useDebouncedValue';
-import { buildAthletePatch } from '@/app/utils/buildAthletePatch';
-import { useToast } from '../../ui/use-toast';
-import { useCategoryStore } from '@/app/store/useCategoryStore';
+} from '@/shared/ui/dialog';
+import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
+import { buildAthletePatch } from '@/shared/lib/buildAthletePatch';
+import { useToast } from '@/shared/ui/use-toast';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
 import { Trash2, Pen } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,8 +43,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../../ui/alertDialog';
-import ClearStorageButton from '../../ui/clear-storage-button';
+} from '@/shared/ui/alertDialog';
+import ClearStorageButton from '@/shared/ui/clear-storage-button';
 
 type AthleteTabProps = {
   newAthlete: Athlete;
@@ -346,7 +345,13 @@ export default function AthleteTabs({
   };
 
   return (
-    <TabsContent value="atletas">
+    <section className="space-y-4">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Athletes</h1>
+        <p className="mt-1 text-slate-600">
+          Cadastro, edicao e limpeza dos atletas do torneio.
+        </p>
+      </header>
       <Card>
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -718,6 +723,6 @@ export default function AthleteTabs({
           </AlertDialog>
         </CardContent>
       </Card>
-    </TabsContent>
+    </section>
   );
 }

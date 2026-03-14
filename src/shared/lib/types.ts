@@ -1,10 +1,19 @@
-import { AgeDivisionRange } from '../components/enums/category';
-import { CategoryMap } from '../hooks/useImportAthletes';
+import type { AgeDivisionRange } from '@/features/categories/lib/category';
 
 export type Fight = {
   id: string;
   athletes: [string, string];
   winner?: string;
+};
+
+export type CategoryMap = {
+  name: string;
+  minWeight: number;
+  maxWeight: number;
+  maxAge?: number;
+  minAge?: number;
+  belt: BeltsEnum | '';
+  gender?: GenderEnum | '';
 };
 
 export type Athlete = {

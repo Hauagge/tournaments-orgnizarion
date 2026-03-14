@@ -1,4 +1,4 @@
-import { Athlete } from '../types';
+import { Athlete } from '@/shared/lib/types';
 
 export const useBalanceBrackets = (brackets: Athlete[][]) => {
   const mergeSingleAthleteBrackets = (brackets: Athlete[][]) => {

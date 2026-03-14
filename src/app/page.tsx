@@ -1,13 +1,5 @@
-import React from 'react';
+import { redirect } from 'next/navigation';
 
-import JiujitsuTournamentUI from './dashboard';
-
-const Page: React.FC = () => {
-  return (
-    <div className="min-h-screen">
-      <JiujitsuTournamentUI />
-    </div>
-  );
-};
-
-export default Page;
+export default function Page() {
+  redirect('/dashboard');
+}

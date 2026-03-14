@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import { WinnerMap } from '@/app/category/[categoryName]/page';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Button } from '../ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Button } from '@/shared/ui/button';
+
+export type WinnerMap = Record<number, string | null>;
 
 type Density = 'normal' | 'compact';
 

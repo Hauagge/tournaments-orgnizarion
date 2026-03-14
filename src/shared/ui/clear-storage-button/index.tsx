@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { Eraser } from 'lucide-react';
 import { Button } from '../button';
 
-// Ajuste os paths dos stores conforme sua estrutura
-import { useAthleteStore } from '@/app/store/useAthleteStore';
-import { useCategoryStore } from '@/app/store/useCategoryStore';
+import { useAthleteStore } from '@/shared/stores/useAthleteStore';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
 import { useToast } from '../use-toast';
 import AlertDialog, {
   AlertDialogContent,
@@ -35,15 +34,12 @@ export default function ClearStorageButton({
 
   async function handleConfirm() {
     try {
-      // 1) Limpando persist (se usar zustand/persist)
       await aStore?.persist?.clearStorage?.();
       await cStore?.persist?.clearStorage?.();
 
-      // 2) Limpando estados em memória
       useAthleteStore.setState({ athletes: [] });
       useCategoryStore.setState({ categories: [] });
 
-      // 3) (Opcional) forçar rehydrate do persist
       await aStore?.persist?.rehydrate?.();
       await cStore?.persist?.rehydrate?.();
 
@@ -53,7 +49,6 @@ export default function ClearStorageButton({
         variant: 'success',
       });
     } catch (err) {
-      // Fallback: se não tiver persist configurado, pelo menos limpa o estado
       try {
         useAthleteStore.setState({ athletes: [] });
         useCategoryStore.setState({ categories: [] });

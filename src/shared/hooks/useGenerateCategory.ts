@@ -3,9 +3,9 @@ import {
   CATEGORIES_BY_AGE_WEIGHT,
   getAgeDivisionByName,
   getBeltsForCategory,
-} from '../components/enums/category';
-import { AgeDivision } from '../components/enums/category';
-import { Category } from '../types';
+} from '@/features/categories/lib/category';
+import { AgeDivision } from '@/features/categories/lib/category';
+import { Category } from '@/shared/lib/types';
 
 export const useGenerateCategories = () => {
   const categories = useMemo(() => {

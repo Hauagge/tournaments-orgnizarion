@@ -1,5 +1,5 @@
-import { getDivisionByAge } from '../components/enums/category';
-import { Athlete, BeltsEnum, Category } from '../types';
+import { getDivisionByAge } from '@/features/categories/lib/category';
+import { Athlete, BeltsEnum, Category } from '@/shared/lib/types';
 
 //@@TODO implementar lógica para permitir configurar diferença máxima de peso, idade e mesclagem de faixa  via config do campeonato
 

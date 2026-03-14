@@ -1,14 +1,14 @@
-import { TabsContent } from '../../ui/tabs';
+'use client';
 
 import { useState } from 'react';
-import { useCategoryStore } from '@/app/store/useCategoryStore';
-import CardCategory from '../../CategoryCards';
-import { useAthleteStore } from '@/app/store/useAthleteStore';
-import { Button } from '../../ui/button';
-import { useSeparateBracketByAgeGroup } from '@/app/hooks/useSeparateAthletesCustomaCategory';
-import { ExportCategoriesPdfButton } from '../../exportPdfButton';
-import { Athlete, Category } from '@/app/types';
-import ClearStorageButton from '../../ui/clear-storage-button';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
+import CardCategory from '@/features/categories/components/category-cards';
+import { useAthleteStore } from '@/shared/stores/useAthleteStore';
+import { Button } from '@/shared/ui/button';
+import { useSeparateBracketByAgeGroup } from '@/shared/hooks/useSeparateAthletesCustomaCategory';
+import { ExportCategoriesPdfButton } from '@/features/categories/components/export-pdf-button';
+import { Athlete, Category } from '@/shared/lib/types';
+import ClearStorageButton from '@/shared/ui/clear-storage-button';
 
 const MAX_PER_CATEGORY = 4;
 
@@ -99,7 +99,13 @@ export default function BracketTabs() {
   }
 
   return (
-    <TabsContent value="chaves">
+    <section className="space-y-4">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+        <p className="mt-1 text-slate-600">
+          Geracao, ajustes manuais e exportacao das chaves por categoria.
+        </p>
+      </header>
       <div className="space-y-6">
         <div className="rounded-xl border bg-white p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -161,6 +167,6 @@ export default function BracketTabs() {
           </p>
         )}
       </div>
-    </TabsContent>
+    </section>
   );
 }

@@ -1,4 +1,6 @@
-import { Card, CardContent } from '../../ui/card';
+'use client';
+
+import { Card, CardContent } from '@/shared/ui/card';
 import {
   Table,
   TableHeader,
@@ -6,13 +8,12 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from '../../ui/table';
-import { TabsContent } from '../../ui/tabs';
-import { Radio } from '../../ui/Radio';
+} from '@/shared/ui/table';
+import { Radio } from '@/shared/ui/Radio';
 import { useState } from 'react';
-import { useAthleteStore } from '@/app/store/useAthleteStore';
-import { DragAndDrop } from '../../ui/dragAndDrop';
-import { useImportAthletes } from '@/app/hooks/useImportAthletes';
+import { useAthleteStore } from '@/shared/stores/useAthleteStore';
+import { DragAndDrop } from '@/shared/ui/dragAndDrop';
+import { useImportAthletes } from '@/shared/hooks/useImportAthletes';
 
 export default function WeighInTabs() {
   const { athletes, updateAthlete } = useAthleteStore();
@@ -40,7 +41,13 @@ export default function WeighInTabs() {
   };
 
   return (
-    <TabsContent value="pesagem">
+    <section className="space-y-4">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight">Weigh-in</h1>
+        <p className="mt-1 text-slate-600">
+          Importacao de atletas por CSV e validacao de aptidao.
+        </p>
+      </header>
       <Card>
         <CardContent className="space-y-4 pt-4">
           <DragAndDrop handleFileUpload={handleFileUpload} />
@@ -101,6 +108,6 @@ export default function WeighInTabs() {
           </Table>
         </CardContent>
       </Card>
-    </TabsContent>
+    </section>
   );
 }

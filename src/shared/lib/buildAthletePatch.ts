@@ -1,5 +1,4 @@
-// src/app/utils/buildAthletePatch.ts
-import type { Athlete } from '@/app/types';
+import type { Athlete } from '@/shared/lib/types';
 
 export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];

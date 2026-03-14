@@ -1,4 +1,4 @@
-import { Athlete } from '../types';
+import { Athlete } from '@/shared/lib/types';
 
 export function sortCategories(categories: string[], athletes: Array<Athlete>) {
   return categories.sort((a, b) => {

@@ -1,10 +1,9 @@
 'use client';
 
-import { Card, CardContent } from '../ui/card';
-// import { useRouter } from 'next/navigation';
-import { Athlete, Category } from '@/app/types';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Athlete, Category } from '@/shared/lib/types';
 import { useMemo, useState } from 'react';
-import { Button } from '../ui/button';
+import { Button } from '@/shared/ui/button';
 import { Plus, Trash2, X } from 'lucide-react';
 import {
   Table,
@@ -13,9 +12,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
+} from '@/shared/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
 
 type BracketsPageProps = {
   categories: Array<Category>;

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import pdfMake from 'pdfmake/build/pdfmake';
 import pdfFonts from 'pdfmake/build/vfs_fonts';
-import { Category } from '@/app/types';
+import { Category } from '@/shared/lib/types';
 
 type TableColumns = 'idx' | 'name' | 'academy' | 'age' | 'weight' | 'belt';
 type Options = { landscape?: boolean; columns?: TableColumns[] };

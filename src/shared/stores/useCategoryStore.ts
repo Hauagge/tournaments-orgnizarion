@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Athlete, Category, Fight } from '../types';
-import { groupAthletes } from '../utils/group-athlete-by-category';
-import { exportAllBracketsPdf } from '../utils/export-brackets-pdf';
+import { Athlete, Category, Fight } from '../lib/types';
+import { groupAthletes } from '../lib/group-athlete-by-category';
+import { exportAllBracketsPdf } from '../lib/export-brackets-pdf';
 
 type CategoryStore = {
   categories: Category[];

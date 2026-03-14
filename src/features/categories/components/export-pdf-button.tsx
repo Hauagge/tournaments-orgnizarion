@@ -1,7 +1,7 @@
 'use client';
 
-import { Button } from '@/app/components/ui/button';
-import { useCategoryStore } from '@/app/store/useCategoryStore';
+import { Button } from '@/shared/ui/button';
+import { useCategoryStore } from '@/shared/stores/useCategoryStore';
 
 export function ExportCategoriesPdfButton() {
   const exportAll = useCategoryStore((s) => s.exportAll);

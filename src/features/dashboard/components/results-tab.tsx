@@ -1,4 +1,6 @@
-import { Card, CardContent } from '../../ui/card';
+'use client';
+
+import { Card, CardContent } from '@/shared/ui/card';
 import {
   Table,
   TableHeader,
@@ -6,12 +8,11 @@ import {
   TableHead,
   TableBody,
   TableCell,
-} from '../../ui/table';
-import { TabsContent } from '../../ui/tabs';
+} from '@/shared/ui/table';
 
 export default function ResultTab() {
   return (
-    <TabsContent value="resultados">
+    <section>
       <Card>
         <CardContent className="pt-4 space-y-4">
           <p>Ranking por categoria:</p>
@@ -35,6 +36,6 @@ export default function ResultTab() {
           </Table>
         </CardContent>
       </Card>
-    </TabsContent>
+    </section>
   );
 }

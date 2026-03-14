@@ -1,4 +1,4 @@
-import { Athlete, Fight } from '../types';
+import { Athlete, Fight } from '@/shared/lib/types';
 
 export function generateFights(athletes: Athlete[]): Array<Fight> {
   const shuffled = [...athletes].sort(() => Math.random() - 0.5);
