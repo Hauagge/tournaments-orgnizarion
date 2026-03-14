@@ -11,9 +11,12 @@ import { TabsContent } from '../../ui/tabs';
 import { Radio } from '../../ui/Radio';
 import { useState } from 'react';
 import { useAthleteStore } from '@/app/store/useAthleteStore';
+import { DragAndDrop } from '../../ui/dragAndDrop';
+import { useImportAthletes } from '@/app/hooks/useImportAthletes';
 
 export default function WeighInTabs() {
   const { athletes, updateAthlete } = useAthleteStore();
+  const { handleFileUpload } = useImportAthletes();
   const [search, setSearch] = useState('');
   const sortedAthletes = [...athletes].sort((a, b) =>
     a.name.localeCompare(b.name),
@@ -39,7 +42,8 @@ export default function WeighInTabs() {
   return (
     <TabsContent value="pesagem">
       <Card>
-        <CardContent className="pt-4">
+        <CardContent className="space-y-4 pt-4">
+          <DragAndDrop handleFileUpload={handleFileUpload} />
           <input
             type="text"
             placeholder="Pesquisar por nome"

@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import pdfMake from 'pdfmake/build/pdfmake';
-import 'pdfmake/build/vfs_fonts';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
 import { Category } from '@/app/types';
 
 type TableColumns = 'idx' | 'name' | 'academy' | 'age' | 'weight' | 'belt';
 type Options = { landscape?: boolean; columns?: TableColumns[] };
 
 async function loadBase64Image(url: string): Promise<string> {
+  (pdfMake as any).vfs = pdfFonts.vfs;
   const response = await fetch(url);
   const blob = await response.blob();
   return new Promise((resolve) => {

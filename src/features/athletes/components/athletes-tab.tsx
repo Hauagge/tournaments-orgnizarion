@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useImportAthletes } from '@/app/hooks/useImportAthletes';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { Card, CardContent } from '../../ui/card';
 import { Input } from '../../ui/input';
@@ -14,7 +13,6 @@ import {
   TableCell,
 } from '../../ui/table';
 import { TabsContent } from '../../ui/tabs';
-import { DragAndDrop } from '../../ui/dragAndDrop';
 import { useAthleteStore } from '@/app/store/useAthleteStore';
 import { Athlete, BeltsEnum, GenderEnum } from '@/app/types';
 import {
@@ -30,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger,
   DialogClose,
 } from '../../ui/dialog';
 import { useDebouncedValue } from '@/app/hooks/useDebouncedValue';
@@ -53,6 +50,7 @@ import ClearStorageButton from '../../ui/clear-storage-button';
 type AthleteTabProps = {
   newAthlete: Athlete;
   setNewAthlete: (athlete: Athlete) => void;
+  createAthleteSignal?: number;
 };
 
 type SortKey = 'name' | 'age' | 'belt' | 'category' | 'weight';
@@ -63,10 +61,10 @@ type ToastPayload = { title?: string; description?: string };
 export default function AthleteTabs({
   newAthlete,
   setNewAthlete,
+  createAthleteSignal = 0,
 }: AthleteTabProps) {
   const { athletes, addAthlete, updateAthletePartial, deleteAthlete } =
     useAthleteStore();
-  const { handleFileUpload } = useImportAthletes();
   const { removeFromCategory } = useCategoryStore();
   const { toast } = useToast?.() ?? {
     toast: (x: ToastPayload) => alert(x?.description || x?.title || 'OK'),
@@ -90,7 +88,13 @@ export default function AthleteTabs({
   const [searchInput, setSearchInput] = useState('');
   const searchDebounced = useDebouncedValue(searchInput, 400);
 
-  function resetForm() {
+  //@@Todo: Alterrar botao limpar para limpar apenas dados referente a tab redenrizada. Ex.: na tab atleas limpar apenas atletas na tab categorias limpar apenas categorias
+
+  //@@Todo: Trocar cor do botão exportar pdf
+
+
+  //@@Todo
+  const resetForm = useCallback(() => {
     setNewAthlete({
       id: 0,
       name: '',
@@ -110,7 +114,15 @@ export default function AthleteTabs({
       age: 0,
       gender: '',
     });
-  }
+  }, [setNewAthlete]);
+
+  useEffect(() => {
+    if (!createAthleteSignal) return;
+    setMode('create');
+    setEditingId(null);
+    resetForm();
+    setOpen(true);
+  }, [createAthleteSignal, resetForm]);
 
   const canSave =
     !!newAthlete.name &&
@@ -346,12 +358,6 @@ export default function AthleteTabs({
                   if (!v) resetForm();
                 }}
               >
-                <DialogTrigger asChild>
-                  <Button>
-                    {mode === 'create' ? 'Novo atleta' : 'Editar atleta'}
-                  </Button>
-                </DialogTrigger>
-
                 <DialogContent
                   className="
                  bg-gray-50
@@ -507,9 +513,6 @@ export default function AthleteTabs({
                   </form>
                 </DialogContent>
               </Dialog>
-
-              {/* Importação em massa permanece disponível */}
-              <DragAndDrop handleFileUpload={handleFileUpload} />
 
               <ClearStorageButton />
             </div>

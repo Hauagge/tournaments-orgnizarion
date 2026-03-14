@@ -9,28 +9,53 @@ const TabsContext = createContext<TabsContextType | null>(null);
 
 export function Tabs({
   defaultValue,
+  value,
+  onValueChange,
+  className = '',
   children,
 }: {
-  defaultValue: string;
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (v: string) => void;
+  className?: string;
   children: React.ReactNode;
 }) {
-  const [value, setValue] = useState(defaultValue);
+  const [internalValue, setInternalValue] = useState(defaultValue ?? '');
+  const selectedValue = value ?? internalValue;
+
+  function setValue(nextValue: string) {
+    if (onValueChange) onValueChange(nextValue);
+    if (value === undefined) setInternalValue(nextValue);
+  }
+
   return (
-    <TabsContext.Provider value={{ value, setValue }}>
-      <div className="w-full h-1">{children}</div>
+    <TabsContext.Provider value={{ value: selectedValue, setValue }}>
+      <div className={`w-full ${className}`}>{children}</div>
     </TabsContext.Provider>
   );
 }
 
-export function TabsList({ children }: { children: React.ReactNode }) {
-  return <div className="flex w-full gap-2 border-b mb-4">{children}</div>;
+export function TabsList({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`flex w-full gap-2 border-b mb-4 ${className}`}>{children}</div>;
 }
 
 export function TabsTrigger({
   value,
+  className = '',
+  activeClassName = '',
+  inactiveClassName = '',
   children,
 }: {
   value: string;
+  className?: string;
+  activeClassName?: string;
+  inactiveClassName?: string;
   children: React.ReactNode;
 }) {
   const context = useContext(TabsContext);
@@ -45,7 +70,7 @@ export function TabsTrigger({
         isActive
           ? 'border-blue-600 text-blue-600'
           : 'border-transparent text-gray-500 hover:text-gray-800'
-      }`}
+      } ${isActive ? activeClassName : inactiveClassName} ${className}`}
     >
       {children}
     </button>

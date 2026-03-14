@@ -100,34 +100,39 @@ export default function BracketTabs() {
 
   return (
     <TabsContent value="chaves">
-      <div className="  space-y-6">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 px-4">
-            <ExportCategoriesPdfButton />
-            <ClearStorageButton />
-            <input
-              type="text"
-              placeholder="Buscar categoria..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="ml-auto border px-2 py-1 rounded text-sm w-64"
-            />
+      <div className="space-y-6">
+        <div className="rounded-xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <Button
+              onClick={handleGenerate}
+              disabled={generating || athletes.length === 0}
+              className="w-full sm:w-auto"
+              title={
+                athletes.length === 0
+                  ? 'Adicione atletas para gerar chaves'
+                  : 'Gerar chaves das lutas'
+              }
+            >
+              {generating ? 'Gerando...' : 'Gerar todas as chaves'}
+            </Button>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="text"
+                placeholder="Buscar categoria..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-10 w-full rounded border px-3 text-sm sm:w-72"
+              />
+              <div className="flex items-center gap-2">
+                <ExportCategoriesPdfButton />
+                <ClearStorageButton />
+              </div>
+            </div>
           </div>
-          <Button
-            onClick={handleGenerate}
-            disabled={generating || athletes.length === 0}
-            className="ml-0 sm:ml-2 max-w-32"
-            title={
-              athletes.length === 0
-                ? 'Adicione atletas para gerar chaves'
-                : 'Gerar chaves das lutas'
-            }
-          >
-            {generating ? 'Gerando...' : 'Gerar todas as chaves'}
-          </Button>
         </div>
         {categories.length > 0 ? (
-          <div className=" h-[85vh] flex flex-col lg:flex-row gap-6 flex-wrap max-w-screen overflow-hidden ">
+          <div className="h-[85vh] flex flex-col flex-wrap gap-6 overflow-hidden lg:flex-row max-w-screen">
             <CardCategory
               categoryName={'🧒 Infantil'}
               categories={infantil}
