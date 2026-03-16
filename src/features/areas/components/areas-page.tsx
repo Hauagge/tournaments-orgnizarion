@@ -3,8 +3,8 @@ import { ManagementPlaceholder } from '@/shared/ui/management-placeholder';
 export default function AreasPage() {
   return (
     <ManagementPlaceholder
-      title="Areas"
-      description="Espaco reservado para definicao das areas de luta."
+      title="Áreas"
+      description="Espaço reservado para definição das áreas de luta."
     />
   );
 }

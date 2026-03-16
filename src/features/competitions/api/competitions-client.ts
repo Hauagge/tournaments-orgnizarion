@@ -6,11 +6,36 @@ import {
 
 const COMPETITIONS_PATH = '/competitions';
 
+type CompetitionListResponse =
+  | Competition[]
+  | {
+      data?: {
+        items: Competition[];
+        page?: number;
+        pageSize?: number;
+        totalItems?: number;
+        totalPages?: number;
+      };
+      competitions?: Competition[];
+      items?: Competition[];
+    };
+
+function normalizeCompetitionListResponse(
+  response: CompetitionListResponse,
+): Competition[] {
+  console.log('Raw response from listCompetitions:', response);
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data?.items)) return response.data.items;
+  if (Array.isArray(response?.competitions)) return response.competitions;
+  if (Array.isArray(response?.items)) return response.items;
+  return [];
+}
+
 export function listCompetitions() {
-  return apiFetch<Competition[]>(COMPETITIONS_PATH, {
+  return apiFetch<CompetitionListResponse>(COMPETITIONS_PATH, {
     method: 'GET',
     cache: 'no-store',
-  });
+  }).then(normalizeCompetitionListResponse);
 }
 
 export function getCompetition(id: string) {
