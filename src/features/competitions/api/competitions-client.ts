@@ -23,7 +23,6 @@ type CompetitionListResponse =
 function normalizeCompetitionListResponse(
   response: CompetitionListResponse,
 ): Competition[] {
-  console.log('Raw response from listCompetitions:', response);
   if (Array.isArray(response)) return response;
   if (Array.isArray(response?.data?.items)) return response.data.items;
   if (Array.isArray(response?.competitions)) return response.competitions;

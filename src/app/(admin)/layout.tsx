@@ -5,6 +5,7 @@ const navItems = [
   { href: '/dashboard', label: 'Painel' },
   { href: '/competitions', label: 'Competições' },
   { href: '/athletes', label: 'Atletas' },
+  { href: '/imports/athletes', label: 'Importações' },
   { href: '/teams', label: 'Equipes' },
   { href: '/weigh-in', label: 'Pesagem' },
   { href: '/categories', label: 'Categorias' },

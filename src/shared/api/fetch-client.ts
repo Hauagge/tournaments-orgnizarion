@@ -1,7 +1,3 @@
-const DEFAULT_HEADERS = {
-  'Content-Type': 'application/json',
-};
-
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -34,10 +30,12 @@ export async function apiFetch<TResponse>(
   init?: RequestInit,
 ): Promise<TResponse> {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+  const isFormDataBody = init?.body instanceof FormData;
+
   const response = await fetch(url, {
     ...init,
     headers: {
-      ...DEFAULT_HEADERS,
+      ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
       ...(init?.headers ?? {}),
     },
   });
