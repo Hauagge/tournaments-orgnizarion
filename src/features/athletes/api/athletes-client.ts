@@ -27,8 +27,6 @@ export function listAthletes({ competitionId, query }: AthleteListParams) {
     | unknown[]
     | {
         data?: unknown[];
-        athletes?: unknown[];
-        items?: unknown[];
       }
   >(path, {
     method: 'GET',
@@ -36,10 +34,7 @@ export function listAthletes({ competitionId, query }: AthleteListParams) {
   }).then(normalizeAthletesResponse);
 }
 
-export function createAthlete(
-  competitionId: string,
-  payload: AthletePayload,
-) {
+export function createAthlete(competitionId: string, payload: AthletePayload) {
   return apiFetch<unknown>(`/competitions/${competitionId}/athletes`, {
     method: 'POST',
     body: JSON.stringify(payload),
