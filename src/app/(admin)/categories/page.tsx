@@ -1,5 +1,5 @@
-import CategoriesTab from '@/features/categories/components/categories-tab';
+import CategoriesPage from '@/features/categories/components/categories-page';
 
 export default function CategoriesRoute() {
-  return <CategoriesTab />;
+  return <CategoriesPage />;
 }
