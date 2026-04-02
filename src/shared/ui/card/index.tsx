@@ -1,18 +1,18 @@
 import React from 'react';
 
+type CardProps = React.HTMLAttributes<HTMLDivElement> & {
+  children: React.ReactNode;
+};
+
 export function Card({
   children,
   className = '',
-  onClick = () => {},
-}: {
-  children: React.ReactNode;
-  className?: string;
-  onClick?: () => void;
-}) {
+  ...props
+}: CardProps) {
   return (
     <div
       className={`rounded-xl border bg-white p-4 shadow-sm ${className}`}
-      onClick={onClick}
+      {...props}
     >
       {children}
     </div>
