@@ -14,6 +14,8 @@ export type Athlete = {
   age: number | null;
   declaredWeight: number | null;
   realWeightGrams: number | null;
+  academyId: string | null;
+  academy: string;
   teamId: string | null;
   team: string;
   weighInStatus: string;
@@ -103,20 +105,24 @@ function gramsToKilograms(value: number | null) {
   return value / 1000;
 }
 
-function readTeamLabel(record: Record<string, unknown>, teamId: string | null) {
-  const explicitTeam = readString(record, [
+function readAcademyLabel(
+  record: Record<string, unknown>,
+  academyId: string | null,
+) {
+  const explicitAcademy = readString(record, [
+    'academy',
+    'academyName',
     'team',
     'teamName',
-    'academy',
     'equipe',
   ]);
 
-  if (explicitTeam) {
-    return explicitTeam;
+  if (explicitAcademy) {
+    return explicitAcademy;
   }
 
-  if (teamId) {
-    return `Equipe #${teamId}`;
+  if (academyId) {
+    return `Academia #${academyId}`;
   }
 
   return '';
@@ -150,12 +156,22 @@ export function normalizeAthlete(input: unknown): Athlete {
     'dob',
     'dataNascimento',
   ]);
+
+  console.log(
+    'Normalizing athlete with input:',
+    record,
+    'and derived birthDate:',
+    birthDate,
+  );
   const rawAge = readNumber(record, ['age', 'idade']);
   const declaredWeightGrams = readNumber(record, [
     'declaredWeightGrams',
     'pesoDeclaradoGramas',
   ]);
-  const teamId = readIdentifier(record, ['teamId']);
+  const academyId =
+    readIdentifier(record, ['academyId', 'teamId']) ??
+    readIdentifier(record, ['teamId']);
+  const academy = readAcademyLabel(record, academyId);
 
   return {
     id: readIdentifier(record, ['id', '_id']) || crypto.randomUUID(),
@@ -164,8 +180,12 @@ export function normalizeAthlete(input: unknown): Athlete {
     birthDate,
     age: calculateAge(birthDate) ?? rawAge,
     declaredWeight:
-      readNumber(record, ['declaredWeight', 'weight', 'pesoDeclarado', 'peso']) ??
-      gramsToKilograms(declaredWeightGrams),
+      readNumber(record, [
+        'declaredWeight',
+        'weight',
+        'pesoDeclarado',
+        'peso',
+      ]) ?? gramsToKilograms(declaredWeightGrams),
     realWeightGrams: readNumber(record, [
       'realWeightGrams',
       'actualWeightGrams',
@@ -173,8 +193,10 @@ export function normalizeAthlete(input: unknown): Athlete {
       'pesoRealGramas',
       'pesoAferidoGramas',
     ]),
-    teamId,
-    team: readTeamLabel(record, teamId),
+    academyId,
+    academy,
+    teamId: academyId,
+    team: academy,
     weighInStatus:
       readString(record, [
         'weighInStatus',
@@ -191,12 +213,12 @@ export function normalizeAthletesResponse(
   const items = Array.isArray(response)
     ? response
     : Array.isArray(response?.data)
-    ? response.data
-    : Array.isArray(response?.athletes)
-    ? response.athletes
-    : Array.isArray(response?.items)
-    ? response.items
-    : [];
+      ? response.data
+      : Array.isArray(response?.athletes)
+        ? response.athletes
+        : Array.isArray(response?.items)
+          ? response.items
+          : [];
 
   return items.map(normalizeAthlete);
 }

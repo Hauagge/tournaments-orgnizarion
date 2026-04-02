@@ -111,8 +111,8 @@ export function AthleteFormDialog({
               <Input placeholder="Ex.: Gabriel Silva" {...register('name')} />
             </Field>
 
-            <Field label="Equipe" error={errors.team?.message}>
-              <Input placeholder="Ex.: Checkmat" {...register('team')} />
+            <Field label="Academia" error={errors.team?.message}>
+              <Input placeholder="Ex.: Checkmat Campinas" {...register('team')} />
             </Field>
 
             <Field label="Faixa" error={errors.belt?.message}>

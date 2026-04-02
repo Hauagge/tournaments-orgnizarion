@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeEvent, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { FileUp, SearchCheck, Upload } from 'lucide-react';
 import {
   useAthleteImportPreview,
@@ -242,6 +243,18 @@ export default function ImportAthletesPage() {
                       label="Falharam"
                       value={String(importSummary.failed)}
                     />
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Link href="/academies">
+                        <Button variant="outline" className="w-full">
+                          Ver academias
+                        </Button>
+                      </Link>
+                      <Link href="/athletes">
+                        <Button variant="outline" className="w-full">
+                          Ver atletas importados
+                        </Button>
+                      </Link>
+                    </div>
                     <div className="space-y-2">
                       <p className="text-sm font-semibold text-slate-700">
                         Motivos

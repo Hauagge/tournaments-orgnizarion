@@ -187,7 +187,7 @@ export default function AthletesPage() {
                       <TableHead>Faixa</TableHead>
                       <TableHead>Idade</TableHead>
                       <TableHead>Peso declarado</TableHead>
-                      <TableHead>Equipe</TableHead>
+                      <TableHead>Academia</TableHead>
                       <TableHead>Status pesagem</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -214,7 +214,7 @@ export default function AthletesPage() {
                               ? `${athlete.declaredWeight} kg`
                               : '-'}
                           </TableCell>
-                          <TableCell>{athlete.team || '-'}</TableCell>
+                          <TableCell>{athlete.academy || '-'}</TableCell>
                           <TableCell>
                             <span
                               className={statusBadgeClassName(

@@ -262,7 +262,7 @@ export default function WeighInTab() {
                               {athlete.name}
                             </p>
                             <p className="mt-1 text-sm text-slate-500">
-                              ID {athlete.id} • {athlete.team || 'Sem equipe'}
+                              ID {athlete.id} • {athlete.academy || 'Sem academia'}
                             </p>
                           </div>
                           <span className={statusBadgeClassName(athlete.weighInStatus)}>
@@ -306,7 +306,7 @@ export default function WeighInTab() {
                 {selectedAthlete ? (
                   <>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <InfoBox label="Equipe" value={selectedAthlete.team || '-'} />
+                      <InfoBox label="Academia" value={selectedAthlete.academy || '-'} />
                       <InfoBox label="Faixa" value={selectedAthlete.belt || '-'} />
                       <InfoBox
                         label="Peso declarado"

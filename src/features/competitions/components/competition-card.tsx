@@ -1,5 +1,8 @@
-import type { ReactNode } from 'react';
+'use client';
+
+import type { KeyboardEvent, ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CalendarClock, GitBranch, Scale, TimerReset } from 'lucide-react';
 import {
   Competition,
@@ -19,9 +22,36 @@ export function CompetitionCard({
   isActive,
   onSetActive,
 }: CompetitionCardProps) {
+  const router = useRouter();
+  const destinationHref =
+    competition.mode === 'KEYS' ? '/key-groups' : `/competitions/${competition.id}`;
+
+  const handleOpenCompetition = () => {
+    onSetActive(competition.id);
+    router.push(destinationHref);
+  };
+
+  const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a')) {
+      return;
+    }
+
+    event.preventDefault();
+    handleOpenCompetition();
+  };
+
   return (
     <Card
-      className={`border-slate-200 p-0 ${isActive ? 'ring-2 ring-blue-500' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={handleOpenCompetition}
+      onKeyDown={handleCardKeyDown}
+      className={`cursor-pointer border-slate-200 p-0 transition hover:-translate-y-0.5 hover:shadow-md ${isActive ? 'ring-2 ring-blue-500' : ''}`}
     >
       <CardContent className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
@@ -66,11 +96,18 @@ export function CompetitionCard({
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button
             variant={isActive ? 'secondary' : 'outline'}
-            onClick={() => onSetActive(competition.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSetActive(competition.id);
+            }}
           >
             {isActive ? 'Competição ativa' : 'Definir como ativa'}
           </Button>
-          <Link href={`/competitions/${competition.id}`} className="sm:flex-1">
+          <Link
+            href={`/competitions/${competition.id}`}
+            className="sm:flex-1"
+            onClick={(event) => event.stopPropagation()}
+          >
             <Button className="w-full" variant="default">
               Editar competição
             </Button>

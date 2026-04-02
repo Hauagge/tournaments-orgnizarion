@@ -6,9 +6,10 @@ const navItems = [
   { href: '/competitions', label: 'Competições' },
   { href: '/athletes', label: 'Atletas' },
   { href: '/imports/athletes', label: 'Importações' },
-  { href: '/teams', label: 'Equipes' },
+  { href: '/academies', label: 'Academias' },
   { href: '/weigh-in', label: 'Pesagem' },
   { href: '/categories', label: 'Categorias' },
+  { href: '/key-groups', label: 'Chaves' },
   { href: '/fights', label: 'Lutas' },
   { href: '/areas', label: 'Áreas' },
 ];

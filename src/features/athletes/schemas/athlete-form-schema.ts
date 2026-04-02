@@ -10,7 +10,7 @@ export const athleteFormSchema = z.object({
   declaredWeight: z.coerce
     .number()
     .positive('Informe um peso maior que zero.'),
-  team: z.string().min(2, 'Informe a equipe.'),
+  team: z.string().min(2, 'Informe a academia.'),
   weighInStatus: z.enum(weighInStatusOptions),
 });
 

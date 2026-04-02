@@ -1,12 +1,21 @@
 export class ApiError extends Error {
   status: number;
   payload: unknown;
+  code?: string;
+  details?: unknown;
 
-  constructor(message: string, status: number, payload?: unknown) {
+  constructor(
+    message: string,
+    status: number,
+    payload?: unknown,
+    options?: { code?: string; details?: unknown },
+  ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.payload = payload;
+    this.code = options?.code;
+    this.details = options?.details;
   }
 }
 
@@ -43,15 +52,37 @@ export async function apiFetch<TResponse>(
   const payload = await parseBody(response);
 
   if (!response.ok) {
-    const message =
-      typeof payload === 'object' &&
-      payload !== null &&
-      'message' in payload &&
-      typeof payload.message === 'string'
-        ? payload.message
-        : `Request failed with status ${response.status}`;
+    const payloadRecord =
+      typeof payload === 'object' && payload !== null
+        ? (payload as Record<string, unknown>)
+        : null;
+    const nestedError =
+      payloadRecord &&
+      typeof payloadRecord.error === 'object' &&
+      payloadRecord.error !== null
+        ? (payloadRecord.error as Record<string, unknown>)
+        : null;
 
-    throw new ApiError(message, response.status, payload);
+    const directMessage =
+      payloadRecord && typeof payloadRecord.message === 'string'
+        ? payloadRecord.message
+        : null;
+    const nestedMessage =
+      nestedError && typeof nestedError.message === 'string'
+        ? nestedError.message
+        : null;
+    const message =
+      directMessage ??
+      nestedMessage ??
+      `Request failed with status ${response.status}`;
+
+    const code =
+      nestedError && typeof nestedError.code === 'string'
+        ? nestedError.code
+        : undefined;
+    const details = nestedError ? nestedError.details : undefined;
+
+    throw new ApiError(message, response.status, payload, { code, details });
   }
 
   return payload as TResponse;

@@ -2,7 +2,7 @@ export const athleteImportCsvColumns = [
   'Nome',
   'Faixa',
   'Peso',
-  'Equipe',
+  'Academia',
   'Idade',
   'Sexo',
   'Data de Nasc',
@@ -102,8 +102,15 @@ function normalizeRowData(record: Record<string, unknown>) {
       case 'Peso':
         acc[key] = readRecordValue(dataCandidate, ['Peso', 'peso']);
         break;
-      case 'Equipe':
-        acc[key] = readRecordValue(dataCandidate, ['Equipe', 'equipe']);
+      case 'Academia':
+        acc[key] = readRecordValue(dataCandidate, [
+          'Academia',
+          'academia',
+          'academyName',
+          'teamName',
+          'Equipe',
+          'equipe',
+        ]);
         break;
       case 'Idade':
         acc[key] = readRecordValue(dataCandidate, ['Idade', 'idade']);
