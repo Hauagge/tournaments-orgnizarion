@@ -31,13 +31,64 @@ export type Fight = {
   scheduledAt: string | null;
 };
 
-export type FightApiResponse =
-  | unknown[]
-  | {
-      data?: unknown[] | { items?: unknown[] };
-      fights?: unknown[];
-      items?: unknown[];
-    };
+
+export type QueueFight = {
+  queueItemId: number;
+  fightId: number;
+  position: number;
+  queueStatus: string;
+  fightStatus: string;
+  athleteAId: number;
+  athleteAName: string;
+  athleteBId: number;
+  athleteBName: string;
+  keyGroupId: number;
+  orderIndex: number;
+};
+
+export type HighlightedFight = {
+  queueItemId: number;
+  fightId: number;
+  position: number;
+  queueStatus: string;
+  fightStatus: string;
+  athleteAId: number;
+  athleteAName: string;
+  athleteBId: number;
+  athleteBName: string;
+  keyGroupId: number;
+  orderIndex: number;
+};
+
+
+type FightApiItem = {
+  id?: string | number | null;
+  competitionId?: string | number | null;
+  categoryId?: string | number | null;
+  categoryName?: string | null;
+  keyGroupId?: string | number | null;
+  keyGroupName?: string | null;
+  areaId?: string | number | null;
+  areaName?: string | null;
+  status?: string | null;
+  athleteAId?: string | number | null;
+  athleteAName?: string | null;
+  athleteBId?: string | number | null;
+  athleteBName?: string | null;
+  winnerId?: string | number | null;
+  winnerAthleteId?: string | number | null;
+  winnerAthleteName?: string | null;
+  winType?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  scheduledAt?: string | null;
+  orderIndex?: number | string | null;
+};
+
+export type FightApiResponse = {
+  data?: FightApiItem[];
+  error?: unknown;
+};
 
 export type FinishFightPayload = {
   winnerId: string;
@@ -177,9 +228,13 @@ export function normalizeFight(input: unknown): Fight {
     status: normalizeFightStatus(readString(record, ['status', 'fightStatus'])),
     areaId: readIdentifier(record, ['areaId']),
     areaName: readString(record, ['areaName', 'area', 'matName']),
-    categoryName: readString(record, ['categoryName', 'category', 'divisionName']),
+    categoryName: readString(record, [
+      'categoryName',
+      'category',
+      'divisionName',
+    ]),
     categoryId: readIdentifier(record, ['categoryId']),
-    order: readNumber(record, ['order', 'fightOrder', 'sequence']),
+    order: readNumber(record, ['order', 'orderIndex', 'fightOrder', 'sequence']),
     winType: readString(record, ['winType', 'victoryType', 'resultType']),
     winnerId: readIdentifier(record, ['winnerId', 'winnerAthleteId']),
     athleteA,
@@ -207,22 +262,13 @@ export function normalizeFight(input: unknown): Fight {
       athleteB?.team ||
       athleteB?.academy ||
       '-',
-    scheduledAt: readString(record, ['scheduledAt', 'date', 'startsAt']) || null,
+    scheduledAt:
+      readString(record, ['scheduledAt', 'startedAt', 'date', 'startsAt']) || null,
   };
 }
 
 export function normalizeFightsResponse(response: FightApiResponse): Fight[] {
-  const items = Array.isArray(response)
-    ? response
-    : Array.isArray(response?.data)
-    ? response.data
-    : Array.isArray(response?.data?.items)
-    ? response.data.items
-    : Array.isArray(response?.fights)
-    ? response.fights
-    : Array.isArray(response?.items)
-    ? response.items
-    : [];
+  const items = Array.isArray(response?.data) ? response.data : [];
 
   return items.map(normalizeFight);
 }
