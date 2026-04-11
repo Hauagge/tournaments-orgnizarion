@@ -23,8 +23,7 @@ export function CompetitionCard({
   onSetActive,
 }: CompetitionCardProps) {
   const router = useRouter();
-  const destinationHref =
-    competition.mode === 'KEYS' ? '/key-groups' : `/competitions/${competition.id}`;
+  const destinationHref = '/key-groups';
 
   const handleOpenCompetition = () => {
     onSetActive(competition.id);
