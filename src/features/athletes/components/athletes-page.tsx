@@ -62,7 +62,7 @@ export default function AthletesPage() {
 
         toast({
           title: 'Atleta atualizado',
-          description: `${values.name} foi atualizado com sucesso.`,
+          description: `${values.fullName} foi atualizado com sucesso.`,
           variant: 'success',
         });
       } else {
@@ -70,7 +70,7 @@ export default function AthletesPage() {
 
         toast({
           title: 'Atleta cadastrado',
-          description: `${values.name} foi adicionado à competição.`,
+          description: `${values.fullName} foi adicionado à competição.`,
           variant: 'success',
         });
       }
@@ -195,7 +195,10 @@ export default function AthletesPage() {
                   <TableBody>
                     {athletes.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-10 text-center text-slate-500">
+                        <TableCell
+                          colSpan={7}
+                          className="py-10 text-center text-slate-500"
+                        >
                           Nenhum atleta encontrado para esta busca.
                         </TableCell>
                       </TableRow>
