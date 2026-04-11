@@ -1,18 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Filter, Play, Swords, Trophy } from 'lucide-react';
-import { useCompetition } from '@/features/competitions/hooks/use-competitions';
+import { Clock3, Play, Trophy } from 'lucide-react';
 import {
   useFinishFight,
   useFights,
-  useGenerateFights,
   useStartFight,
 } from '@/features/fights/hooks/use-fights';
 import {
   Fight,
-  FightStatus,
   getFightStatusBadgeClassName,
   getFightStatusLabel,
 } from '@/features/fights/types/fight';
@@ -38,12 +34,6 @@ import {
 } from '@/shared/ui/table';
 import { useToast } from '@/shared/ui/use-toast';
 
-type KeyFightGroup = {
-  id: string;
-  label: string;
-  fights: Fight[];
-};
-
 const winTypeOptions = [
   'POINTS',
   'SUBMISSION',
@@ -52,19 +42,48 @@ const winTypeOptions = [
   'REFEREE_DECISION',
 ] as const;
 
+function getWinTypeLabel(winType: string) {
+  switch (winType) {
+    case 'POINTS':
+      return 'Pontos';
+    case 'SUBMISSION':
+      return 'Finalização';
+    case 'WO':
+      return 'W.O.';
+    case 'DISQUALIFICATION':
+      return 'Desclassificação';
+    case 'REFEREE_DECISION':
+      return 'Decisão do árbitro';
+    default:
+      return winType || '-';
+  }
+}
+
+function getCompactFightStatusBadgeClassName(status: Fight['status']) {
+  switch (status) {
+    case 'IN_PROGRESS':
+      return 'inline-flex rounded-full border border-blue-900 bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-blue-900 sm:border-2 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.12em]';
+    case 'FINISHED':
+      return 'inline-flex rounded-full border border-emerald-900 bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-900 sm:border-2 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.12em]';
+    default:
+      return 'inline-flex rounded-full border border-amber-900 bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-amber-900 sm:border-2 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.12em]';
+  }
+}
+
 export default function FightsTab() {
-  const [statusFilter, setStatusFilter] = useState<'ALL' | FightStatus>('ALL');
   const [areaFilter, setAreaFilter] = useState('ALL');
   const [selectedFightId, setSelectedFightId] = useState<string | null>(null);
   const [finishFightId, setFinishFightId] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState('');
-  const [winType, setWinType] = useState<(typeof winTypeOptions)[number]>('POINTS');
+  const [winType, setWinType] =
+    useState<(typeof winTypeOptions)[number]>('POINTS');
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  const activeCompetitionId = useCompetitionStore((state) => state.activeCompetitionId);
+  const activeCompetitionId = useCompetitionStore(
+    (state) => state.activeCompetitionId,
+  );
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
-  const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const fightsQuery = useFights(activeCompetitionId);
-  const generateMutation = useGenerateFights(activeCompetitionId);
   const startMutation = useStartFight(activeCompetitionId);
   const finishMutation = useFinishFight(activeCompetitionId);
   const { toast } = useToast();
@@ -78,7 +97,6 @@ export default function FightsTab() {
     () => fights.find((fight) => fight.id === finishFightId) ?? null,
     [fights, finishFightId],
   );
-  const competitionMode = competitionQuery.data?.mode ?? 'ABSOLUTE_GP';
 
   useEffect(() => {
     if (!fightToFinish) {
@@ -87,10 +105,21 @@ export default function FightsTab() {
       return;
     }
 
-    const firstAvailableWinner = fightToFinish.athleteA?.id ?? fightToFinish.athleteB?.id ?? '';
+    const firstAvailableWinner =
+      fightToFinish.athleteA?.id ?? fightToFinish.athleteB?.id ?? '';
     setWinnerId(firstAvailableWinner);
     setWinType('POINTS');
   }, [fightToFinish]);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   const areaOptions = useMemo(() => {
     const uniqueAreas = new Map<string, string>();
@@ -101,65 +130,35 @@ export default function FightsTab() {
       }
     });
 
-    return Array.from(uniqueAreas.entries()).map(([value, label]) => ({ value, label }));
+    return Array.from(uniqueAreas.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
   }, [fights]);
 
-  const filteredFights = useMemo(() => {
+  const areaFilteredFights = useMemo(() => {
     return fights.filter((fight) => {
-      const matchesStatus = statusFilter === 'ALL' || fight.status === statusFilter;
       const fightAreaKey = fight.areaId ?? fight.areaName;
       const matchesArea = areaFilter === 'ALL' || fightAreaKey === areaFilter;
 
-      return matchesStatus && matchesArea;
+      return matchesArea;
     });
-  }, [areaFilter, fights, statusFilter]);
+  }, [areaFilter, fights]);
 
-  const groupedKeyFights = useMemo(() => {
-    const groups = new Map<string, KeyFightGroup>();
+  const inProgressFights = useMemo(
+    () => areaFilteredFights.filter((fight) => fight.status === 'IN_PROGRESS'),
+    [areaFilteredFights],
+  );
 
-    filteredFights.forEach((fight) => {
-      const groupId = fight.keyGroupId ?? `fight-${fight.id}`;
-      const existing = groups.get(groupId);
-
-      if (existing) {
-        existing.fights.push(fight);
-        return;
-      }
-
-      groups.set(groupId, {
-        id: groupId,
-        label: fight.keyGroupName || `Chave ${groupId}`,
-        fights: [fight],
+  const upcomingFights = useMemo(() => {
+    return areaFilteredFights
+      .filter((fight) => fight.status === 'SCHEDULED')
+      .sort((fightA, fightB) => {
+        const orderA = fightA.order ?? Number.MAX_SAFE_INTEGER;
+        const orderB = fightB.order ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
       });
-    });
-
-    return Array.from(groups.values()).sort((groupA, groupB) => {
-      const orderA = Math.min(...groupA.fights.map((fight) => fight.order ?? Number.MAX_SAFE_INTEGER));
-      const orderB = Math.min(...groupB.fights.map((fight) => fight.order ?? Number.MAX_SAFE_INTEGER));
-      return orderA - orderB;
-    });
-  }, [filteredFights]);
-
-  async function handleGenerateFights() {
-    if (!activeCompetitionId) {
-      return;
-    }
-
-    try {
-      await generateMutation.mutateAsync();
-      toast({
-        title: 'Lutas geradas',
-        description: 'A lista foi atualizada com sucesso.',
-        variant: 'success',
-      });
-    } catch (error) {
-      toast({
-        title: 'Falha ao gerar lutas',
-        description: error instanceof Error ? error.message : 'Tente novamente.',
-        variant: 'destructive',
-      });
-    }
-  }
+  }, [areaFilteredFights]);
 
   async function handleStartFight(fightId: string) {
     try {
@@ -172,7 +171,8 @@ export default function FightsTab() {
     } catch (error) {
       toast({
         title: 'Falha ao iniciar luta',
-        description: error instanceof Error ? error.message : 'Tente novamente.',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
         variant: 'destructive',
       });
     }
@@ -197,7 +197,8 @@ export default function FightsTab() {
     } catch (error) {
       toast({
         title: 'Falha ao finalizar luta',
-        description: error instanceof Error ? error.message : 'Tente novamente.',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
         variant: 'destructive',
       });
     }
@@ -209,23 +210,31 @@ export default function FightsTab() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500">
-              Fights
+              Lutas
             </p>
             <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
-              Controle as lutas da competicao ativa
+              Acompanhe lutas em andamento e próximas chamadas
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              Gere o chaveamento, filtre por status e area, inicie ou finalize lutas sem sair da tela.
+              Monitore o que está acontecendo agora, veja a sequência das
+              próximas lutas e opere resultados sem sair da tela.
             </p>
           </div>
 
-          <Button
-            onClick={() => void handleGenerateFights()}
-            disabled={!activeCompetitionId || !hasHydrated || generateMutation.isPending}
-            className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800"
-          >
-            {generateMutation.isPending ? 'Gerando...' : 'Gerar lutas'}
-          </Button>
+          <div className="rounded-2xl border-4 border-slate-900 bg-amber-100 px-5 py-3 text-right">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+              Agora
+            </p>
+            <p className="mt-1 text-2xl font-black text-slate-950">
+              {currentTime
+                ? currentTime.toLocaleTimeString('pt-BR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                  })
+                : '--:--:--'}
+            </p>
+          </div>
         </div>
       </header>
 
@@ -240,51 +249,11 @@ export default function FightsTab() {
 
       {activeCompetitionId && (
         <>
-          {competitionMode === 'KEYS' ? (
-            <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
-              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    Operação das chaves
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    Monte as chaves antes de gerar as lutas
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-600">
-                    No modo de chaves, os atletas são organizados em grupos de até 4
-                    atletas. Gere ou ajuste as chaves na tela dedicada antes de operar
-                    as lutas aqui.
-                  </p>
-                </div>
-                <Link href="/key-groups">
-                  <Button variant="outline">Abrir chaves</Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : null}
-
           <Card className="border-4 border-slate-900 p-0">
-            <CardContent className="grid gap-4 p-5 lg:grid-cols-2">
+            <CardContent className="grid gap-4 p-5 lg:grid-cols-[1.2fr_repeat(3,minmax(0,0.6fr))]">
               <label className="block space-y-2">
                 <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                  <Filter className="h-4 w-4" />
-                  Status
-                </span>
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value as 'ALL' | FightStatus)}
-                  className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="ALL">Todos</option>
-                  <option value="SCHEDULED">Agendadas</option>
-                  <option value="IN_PROGRESS">Em andamento</option>
-                  <option value="FINISHED">Finalizadas</option>
-                </select>
-              </label>
-
-              <label className="block space-y-2">
-                <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                  <Swords className="h-4 w-4" />
+                  <Clock3 className="h-4 w-4" />
                   Area
                 </span>
                 <select
@@ -300,6 +269,21 @@ export default function FightsTab() {
                   ))}
                 </select>
               </label>
+
+              <MetricTile
+                label="Em andamento"
+                value={String(inProgressFights.length)}
+                tone="live"
+              />
+              <MetricTile
+                label="Próximas"
+                value={String(upcomingFights.length)}
+                tone="upcoming"
+              />
+              <MetricTile
+                label="Total"
+                value={String(areaFilteredFights.length)}
+              />
             </CardContent>
           </Card>
 
@@ -316,136 +300,226 @@ export default function FightsTab() {
             />
           )}
 
-          {!fightsQuery.isLoading && !fightsQuery.isError && fights.length === 0 && (
-            <StateCard
-              message="Nenhuma luta encontrada. Gere as lutas para popular a listagem."
-              tone="empty"
-            />
-          )}
-
-          {!fightsQuery.isLoading && !fightsQuery.isError && fights.length > 0 && filteredFights.length === 0 && (
-            <StateCard
-              message="Nenhuma luta corresponde aos filtros atuais."
-              tone="empty"
-            />
-          )}
+          {!fightsQuery.isLoading &&
+            !fightsQuery.isError &&
+            fights.length === 0 && (
+              <StateCard
+                message="Nenhuma luta encontrada para a competição ativa."
+                tone="empty"
+              />
+            )}
 
           {!fightsQuery.isLoading &&
             !fightsQuery.isError &&
-            filteredFights.length > 0 &&
-            (competitionMode === 'KEYS' ? (
-              <div className="grid gap-4 xl:grid-cols-2">
-                {groupedKeyFights.map((group) => (
-                  <Card
-                    key={group.id}
-                    className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]"
-                  >
-                    <CardContent className="space-y-4 p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                            Chave
-                          </p>
-                          <h2 className="mt-2 text-2xl font-black text-slate-950">
-                            {group.label}
-                          </h2>
-                        </div>
-                        <span className="rounded-full border-2 border-slate-900 bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-900">
-                          {group.fights.length} lutas
-                        </span>
-                      </div>
+            fights.length > 0 &&
+            areaFilteredFights.length === 0 && (
+              <StateCard
+                message="Nenhuma luta corresponde à área selecionada."
+                tone="empty"
+              />
+            )}
 
-                      <div className="space-y-3">
-                        {group.fights.map((fight, index) => (
-                          <div
-                            key={fight.id}
-                            className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-4"
-                          >
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                              <div>
-                                <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                                  Luta {index + 1}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedFightId(fight.id)}
-                                  className="mt-2 text-left text-lg font-black text-slate-950 underline-offset-4 hover:underline"
-                                >
-                                  {fight.athleteA?.name || 'A definir'} vs {fight.athleteB?.name || 'A definir'}
-                                </button>
-                                <p className="mt-1 text-sm text-slate-600">
-                                  {fight.areaName || 'Sem area'} · {fight.categoryName || 'Sem categoria'}
-                                </p>
-                              </div>
+          {!fightsQuery.isLoading &&
+            !fightsQuery.isError &&
+            areaFilteredFights.length > 0 && (
+              <>
+                <section className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                    <h2 className="text-2xl font-black text-slate-950">
+                      Lutas em andamento
+                    </h2>
+                  </div>
 
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className={getFightStatusBadgeClassName(fight.status)}>
-                                  {getFightStatusLabel(fight.status)}
-                                </span>
-                                <FightActions
-                                  fight={fight}
-                                  isStarting={startMutation.isPending}
-                                  isFinishing={finishMutation.isPending}
-                                  onStart={handleStartFight}
-                                  onFinish={(fightId) => setFinishFightId(fightId)}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
-                <div className="overflow-x-auto">
-                  <Table className="rounded-none border-0">
-                    <TableHeader className="bg-slate-100">
-                      <TableRow className="hover:bg-slate-100">
-                        <TableHead>Luta</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Area</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Acoes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredFights.map((fight) => (
-                        <TableRow key={fight.id} className="hover:bg-amber-50">
-                          <TableCell>
-                            <button
-                              type="button"
-                              onClick={() => setSelectedFightId(fight.id)}
-                              className="text-left font-semibold underline-offset-4 hover:underline"
-                            >
-                              {fight.athleteA?.name || 'A definir'} vs {fight.athleteB?.name || 'A definir'}
-                            </button>
-                          </TableCell>
-                          <TableCell>
-                            <span className={getFightStatusBadgeClassName(fight.status)}>
-                              {getFightStatusLabel(fight.status)}
-                            </span>
-                          </TableCell>
-                          <TableCell>{fight.areaName || '-'}</TableCell>
-                          <TableCell>{fight.categoryName || '-'}</TableCell>
-                          <TableCell>
-                            <FightActions
-                              fight={fight}
-                              isStarting={startMutation.isPending}
-                              isFinishing={finishMutation.isPending}
-                              onStart={handleStartFight}
-                              onFinish={(fightId) => setFinishFightId(fightId)}
-                            />
-                          </TableCell>
-                        </TableRow>
+                  {inProgressFights.length === 0 ? (
+                    <StateCard
+                      message="Nenhuma luta em andamento no momento."
+                      tone="empty"
+                    />
+                  ) : (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      {inProgressFights.map((fight) => (
+                        <LiveFightCard
+                          key={fight.id}
+                          fight={fight}
+                          isStarting={startMutation.isPending}
+                          isFinishing={finishMutation.isPending}
+                          onOpen={() => setSelectedFightId(fight.id)}
+                          onStart={handleStartFight}
+                          onFinish={(fightId) => setFinishFightId(fightId)}
+                        />
                       ))}
-                    </TableBody>
-                  </Table>
+                    </div>
+                  )}
+                </section>
+
+                <section className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <span className="h-3 w-3 rounded-full bg-sky-500" />
+                    <h2 className="text-2xl font-black text-slate-950">
+                      Próximas lutas
+                    </h2>
+                  </div>
+
+                  {upcomingFights.length === 0 ? (
+                    <StateCard
+                      message="Nenhuma luta agendada para a sequência atual."
+                      tone="empty"
+                    />
+                  ) : (
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {upcomingFights.map((fight) => (
+                        <UpcomingFightCard
+                          key={fight.id}
+                          fight={fight}
+                          isStarting={startMutation.isPending}
+                          isFinishing={finishMutation.isPending}
+                          onOpen={() => setSelectedFightId(fight.id)}
+                          onStart={handleStartFight}
+                          onFinish={(fightId) => setFinishFightId(fightId)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <div className="grid gap-3 md:hidden">
+                  {areaFilteredFights.map((fight) => (
+                    <Card
+                      key={fight.id}
+                      className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]"
+                    >
+                      <CardContent className="space-y-4 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedFightId(fight.id)}
+                            className="text-left text-sm font-semibold leading-5 text-slate-950 underline-offset-4 hover:underline"
+                          >
+                            {fight.athleteA?.name || 'A definir'} vs {fight.athleteB?.name || 'A definir'}
+                          </button>
+                          <span className={getCompactFightStatusBadgeClassName(fight.status)}>
+                            {getFightStatusLabel(fight.status)}
+                          </span>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                              Área
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-950">
+                              {fight.areaName || '-'}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                              Categoria
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-950">
+                              {fight.categoryName || '-'}
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
+                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                              Vencedor
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-slate-950">
+                              {resolveWinnerName(fight)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <FightActions
+                          fight={fight}
+                          isStarting={startMutation.isPending}
+                          isFinishing={finishMutation.isPending}
+                          onStart={handleStartFight}
+                          onFinish={(fightId) => setFinishFightId(fightId)}
+                        />
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-              </Card>
-            ))}
+
+                <Card className="hidden overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] md:block">
+                  <div className="overflow-x-auto">
+                    <Table className="rounded-none border-0">
+                      <TableHeader className="bg-slate-100">
+                        <TableRow className="hover:bg-slate-100">
+                          <TableHead className="text-xs sm:text-sm">
+                            Luta
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Status
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Área
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Categoria
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Vencedor
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Ações
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {areaFilteredFights.map((fight) => (
+                          <TableRow
+                            key={fight.id}
+                            className="hover:bg-amber-50"
+                          >
+                            <TableCell className="py-3">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedFightId(fight.id)}
+                                className="text-left text-sm font-semibold leading-5 underline-offset-4 hover:underline"
+                              >
+                                {fight.athleteA?.name || 'A definir'} vs{' '}
+                                {fight.athleteB?.name || 'A definir'}
+                              </button>
+                            </TableCell>
+                            <TableCell className="py-3 text-xs sm:text-sm">
+                              <span
+                                className={getCompactFightStatusBadgeClassName(
+                                  fight.status,
+                                )}
+                              >
+                                {getFightStatusLabel(fight.status)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="py-3 text-xs sm:text-sm">
+                              {fight.areaName || '-'}
+                            </TableCell>
+                            <TableCell className="py-3 text-xs sm:text-sm">
+                              {fight.categoryName || '-'}
+                            </TableCell>
+                            <TableCell className="py-3 text-xs sm:text-sm">
+                              {resolveWinnerName(fight)}
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <FightActions
+                                fight={fight}
+                                isStarting={startMutation.isPending}
+                                isFinishing={finishMutation.isPending}
+                                onStart={handleStartFight}
+                                onFinish={(fightId) =>
+                                  setFinishFightId(fightId)
+                                }
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              </>
+            )}
 
           <FightDetailDrawer
             fight={selectedFight}
@@ -464,7 +538,9 @@ export default function FightsTab() {
             winnerId={winnerId}
             winType={winType}
             onWinnerChange={setWinnerId}
-            onWinTypeChange={(value) => setWinType(value as (typeof winTypeOptions)[number])}
+            onWinTypeChange={(value) =>
+              setWinType(value as (typeof winTypeOptions)[number])
+            }
             onSubmit={() => void handleFinishFight()}
             isSubmitting={finishMutation.isPending}
           />
@@ -510,6 +586,221 @@ function FightActions({
   );
 }
 
+function MetricTile({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'live' | 'upcoming';
+}) {
+  const className =
+    tone === 'live'
+      ? 'border-red-300 bg-red-50 text-red-900'
+      : tone === 'upcoming'
+        ? 'border-sky-300 bg-sky-50 text-sky-900'
+        : 'border-slate-300 bg-slate-50 text-slate-900';
+
+  return (
+    <div className={`rounded-2xl border-2 p-4 ${className}`}>
+      <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  );
+}
+
+function LiveFightCard({
+  fight,
+  isStarting,
+  isFinishing,
+  onOpen,
+  onStart,
+  onFinish,
+}: {
+  fight: Fight;
+  isStarting: boolean;
+  isFinishing: boolean;
+  onOpen: () => void;
+  onStart: (fightId: string) => void | Promise<void>;
+  onFinish: (fightId: string) => void;
+}) {
+  return (
+    <Card className="overflow-hidden border-4 border-red-300 bg-gradient-to-br from-red-100 via-orange-50 to-white p-0 shadow-[6px_6px_0_0_rgba(127,29,29,0.18)]">
+      <CardContent className="space-y-5 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="inline-flex items-center gap-2 rounded-full border-2 border-red-700 bg-red-600 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white">
+            <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+            Ao vivo
+          </div>
+          <span className={getFightStatusBadgeClassName(fight.status)}>
+            {getFightStatusLabel(fight.status)}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block w-full text-left"
+        >
+          <FighterCard
+            name={fight.athleteA?.name}
+            academy={fight.athleteA?.academy}
+            tone="live"
+          />
+          <div className="py-3 text-center text-lg font-black uppercase tracking-[0.18em] text-red-700">
+            VS
+          </div>
+          <FighterCard
+            name={fight.athleteB?.name}
+            academy={fight.athleteB?.academy}
+            tone="live"
+          />
+        </button>
+
+        <div className="flex flex-wrap gap-2 border-t-2 border-red-200 pt-4">
+          <InfoPill label={fight.areaName || 'Sem área'} tone="live" />
+          <InfoPill label={fight.categoryName || 'Sem categoria'} tone="live" />
+          {fight.order ? (
+            <InfoPill label={`Ordem ${fight.order}`} tone="live" />
+          ) : null}
+        </div>
+
+        <FightActions
+          fight={fight}
+          isStarting={isStarting}
+          isFinishing={isFinishing}
+          onStart={onStart}
+          onFinish={onFinish}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function UpcomingFightCard({
+  fight,
+  isStarting,
+  isFinishing,
+  onOpen,
+  onStart,
+  onFinish,
+}: {
+  fight: Fight;
+  isStarting: boolean;
+  isFinishing: boolean;
+  onOpen: () => void;
+  onStart: (fightId: string) => void | Promise<void>;
+  onFinish: (fightId: string) => void;
+}) {
+  return (
+    <Card className="overflow-hidden border-4 border-slate-900 bg-white p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+      <CardContent className="space-y-5 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <span className="inline-flex rounded-full border-2 border-sky-900 bg-sky-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-sky-900">
+            Agendada
+          </span>
+          <div className="text-right">
+            <p className="text-lg font-black text-slate-950">
+              {fight.order ? `#${fight.order}` : '--'}
+            </p>
+            <p className="text-xs uppercase tracking-[0.14em] text-slate-500">
+              Ordem prevista
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className="block w-full text-left"
+        >
+          <FighterCard
+            name={fight.athleteA?.name}
+            academy={fight.athleteA?.academy}
+            tone="upcoming"
+          />
+          <div className="py-3 text-center text-lg font-black uppercase tracking-[0.18em] text-slate-500">
+            VS
+          </div>
+          <FighterCard
+            name={fight.athleteB?.name}
+            academy={fight.athleteB?.academy}
+            tone="upcoming"
+          />
+        </button>
+
+        <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+          <InfoPill label={fight.areaName || 'Sem área'} tone="upcoming" />
+          <InfoPill
+            label={fight.categoryName || 'Sem categoria'}
+            tone="upcoming"
+          />
+        </div>
+
+        <FightActions
+          fight={fight}
+          isStarting={isStarting}
+          isFinishing={isFinishing}
+          onStart={onStart}
+          onFinish={onFinish}
+        />
+      </CardContent>
+    </Card>
+  );
+}
+
+function FighterCard({
+  name,
+  academy,
+  tone,
+}: {
+  name?: string;
+  academy?: string;
+  tone: 'live' | 'upcoming';
+}) {
+  const className =
+    tone === 'live'
+      ? 'border-red-200 bg-white'
+      : 'border-slate-200 bg-slate-50';
+  const textClassName = 'text-slate-950';
+  const subClassName = 'text-slate-500';
+
+  return (
+    <div className={`rounded-2xl border p-4 ${className}`}>
+      <p className={`text-lg font-black ${textClassName}`}>
+        {name || 'A definir'}
+      </p>
+      <p className={`mt-1 text-sm ${subClassName}`}>
+        {academy || 'Sem academia'}
+      </p>
+    </div>
+  );
+}
+
+function InfoPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: 'live' | 'upcoming';
+}) {
+  const className =
+    tone === 'live'
+      ? 'border-red-200 bg-white text-slate-700'
+      : 'border-slate-200 bg-slate-50 text-slate-700';
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-sm font-medium ${className}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function FightDetailDrawer({
   fight,
   isOpen,
@@ -538,10 +829,12 @@ function FightDetailDrawer({
         <div className="flex h-full flex-col bg-white">
           <DialogHeader className="border-b-4 border-slate-900 px-6 py-5 text-left">
             <DialogTitle className="text-xl font-black text-slate-950">
-              {fight?.athleteA?.name || 'A definir'} vs {fight?.athleteB?.name || 'A definir'}
+              {fight?.athleteA?.name || 'A definir'} vs{' '}
+              {fight?.athleteB?.name || 'A definir'}
             </DialogTitle>
             <DialogDescription className="text-slate-600">
-              Revise a luta, confira a pesagem dos atletas e execute as acoes necessarias.
+              Revise a luta, confira a pesagem dos atletas e execute as acoes
+              necessarias.
             </DialogDescription>
           </DialogHeader>
 
@@ -560,15 +853,37 @@ function FightDetailDrawer({
                 </div>
 
                 <DetailGrid>
-                  <DetailItem label="Categoria" value={fight.categoryName || '-'} />
-                  <DetailItem label="Ordem" value={fight.order ? String(fight.order) : '-'} />
-                  <DetailItem label="Win type" value={fight.winType || '-'} />
-                  <DetailItem label="Vencedor" value={resolveWinnerName(fight)} />
+                  <DetailItem
+                    label="Categoria"
+                    value={fight.categoryName || '-'}
+                  />
+                  <DetailItem
+                    label="Ordem"
+                    value={fight.order ? String(fight.order) : '-'}
+                  />
+                  <DetailItem
+                    label="Tipo de vitória"
+                    value={getWinTypeLabel(fight.winType)}
+                  />
+                  <DetailItem
+                    label="Vencedor"
+                    value={resolveWinnerName(fight)}
+                  />
                 </DetailGrid>
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                  <ParticipantCard title="Atleta A" name={fight.athleteA?.name} academy={fight.athleteA?.academy} weighInStatus={fight.athleteA?.weighInStatus} />
-                  <ParticipantCard title="Atleta B" name={fight.athleteB?.name} academy={fight.athleteB?.academy} weighInStatus={fight.athleteB?.weighInStatus} />
+                  <ParticipantCard
+                    title="Atleta A"
+                    name={fight.athleteA?.name}
+                    academy={fight.athleteA?.academy}
+                    weighInStatus={fight.athleteA?.weighInStatus}
+                  />
+                  <ParticipantCard
+                    title="Atleta B"
+                    name={fight.athleteB?.name}
+                    academy={fight.athleteB?.academy}
+                    weighInStatus={fight.athleteB?.weighInStatus}
+                  />
                 </div>
               </>
             ) : null}
@@ -620,7 +935,9 @@ function FinishFightDialog({
   onSubmit: () => void;
   isSubmitting: boolean;
 }) {
-  const winnerOptions = [fight?.athleteA, fight?.athleteB].filter((athlete): athlete is NonNullable<typeof athlete> => Boolean(athlete));
+  const winnerOptions = [fight?.athleteA, fight?.athleteB].filter(
+    (athlete): athlete is NonNullable<typeof athlete> => Boolean(athlete),
+  );
 
   return (
     <Dialog
@@ -660,7 +977,7 @@ function FinishFightDialog({
 
             <label className="block space-y-2">
               <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
-                Win type
+                Tipo de vitória
               </span>
               <select
                 value={winType}
@@ -669,7 +986,7 @@ function FinishFightDialog({
               >
                 {winTypeOptions.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {getWinTypeLabel(option)}
                   </option>
                 ))}
               </select>
@@ -677,10 +994,19 @@ function FinishFightDialog({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
               Cancelar
             </Button>
-            <Button type="button" onClick={onSubmit} disabled={!winnerId || !winType || isSubmitting}>
+            <Button
+              type="button"
+              onClick={onSubmit}
+              disabled={!winnerId || !winType || isSubmitting}
+            >
               {isSubmitting ? 'Salvando...' : 'Finalizar luta'}
             </Button>
           </DialogFooter>
@@ -706,7 +1032,9 @@ function ParticipantCard({
       <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">
         {title}
       </p>
-      <p className="mt-3 text-lg font-black text-slate-950">{name || 'A definir'}</p>
+      <p className="mt-3 text-lg font-black text-slate-950">
+        {name || 'A definir'}
+      </p>
       <p className="mt-1 text-sm text-slate-600">{academy || 'Sem academia'}</p>
       <p className="mt-3 text-sm font-semibold text-slate-700">
         Pesagem: {getWeighInStatusLabel(weighInStatus || 'PENDING')}
@@ -757,10 +1085,10 @@ function StateCard({
     tone === 'warning'
       ? 'border-amber-300 bg-amber-50 text-amber-950'
       : tone === 'error'
-      ? 'border-red-300 bg-red-50 text-red-700'
-      : tone === 'empty'
-      ? 'border-slate-300 bg-slate-50 text-slate-600'
-      : 'border-slate-300 bg-white text-slate-600';
+        ? 'border-red-300 bg-red-50 text-red-700'
+        : tone === 'empty'
+          ? 'border-slate-300 bg-slate-50 text-slate-600'
+          : 'border-slate-300 bg-white text-slate-600';
 
   return (
     <Card className={`border-4 p-0 ${toneClassName}`}>

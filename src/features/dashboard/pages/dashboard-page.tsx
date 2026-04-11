@@ -33,8 +33,18 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | FightStatus>('ALL');
   const activeCompetitionId = useCompetitionStore((state) => state.activeCompetitionId);
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
-  const areasQuery = useAreas(activeCompetitionId, { refetchInterval: POLLING_INTERVAL });
-  const fightsQuery = useFights(activeCompetitionId, { refetchInterval: POLLING_INTERVAL });
+  const areasQuery = useAreas(activeCompetitionId, {
+    refetchInterval: (query) =>
+      Array.isArray(query.state.data) && query.state.data.length > 0
+        ? POLLING_INTERVAL
+        : false,
+  });
+  const fightsQuery = useFights(activeCompetitionId, {
+    refetchInterval: (query) =>
+      Array.isArray(query.state.data) && query.state.data.length > 0
+        ? POLLING_INTERVAL
+        : false,
+  });
   const areas = areasQuery.data ?? [];
   const fights = fightsQuery.data ?? [];
 
