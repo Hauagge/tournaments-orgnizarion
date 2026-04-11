@@ -9,6 +9,7 @@ import {
   getWeighInStatusLabel,
   weighInStatusOptions,
 } from '@/features/athletes/types/athlete';
+import { useBelts } from '@/features/belts/hooks/use-belts';
 import {
   AthleteFormValues,
   athleteFormSchema,
@@ -32,18 +33,6 @@ type AthleteFormDialogProps = {
   onSubmit: (values: AthleteFormValues) => void | Promise<void>;
 };
 
-const beltOptions = [
-  'BRANCA',
-  'CINZA',
-  'AMARELA',
-  'LARANJA',
-  'VERDE',
-  'AZUL',
-  'ROXA',
-  'MARROM',
-  'PRETA',
-];
-
 export function AthleteFormDialog({
   athlete,
   isOpen,
@@ -51,10 +40,12 @@ export function AthleteFormDialog({
   onClose,
   onSubmit,
 }: AthleteFormDialogProps) {
+  const beltsQuery = useBelts();
+  const beltOptions = beltsQuery.data ?? [];
   const form = useForm<AthleteFormValues>({
     resolver: zodResolver(athleteFormSchema),
     defaultValues: {
-      name: athlete?.name ?? '',
+      fullName: athlete?.name ?? '',
       belt: athlete?.belt ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
@@ -69,7 +60,7 @@ export function AthleteFormDialog({
 
   useEffect(() => {
     form.reset({
-      name: athlete?.name ?? '',
+      fullName: athlete?.name ?? '',
       belt: athlete?.belt ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
@@ -107,12 +98,18 @@ export function AthleteFormDialog({
 
         <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Nome" error={errors.name?.message}>
-              <Input placeholder="Ex.: Gabriel Silva" {...register('name')} />
+            <Field label="Nome" error={errors.fullName?.message}>
+              <Input
+                placeholder="Ex.: Gabriel Silva"
+                {...register('fullName')}
+              />
             </Field>
 
             <Field label="Academia" error={errors.team?.message}>
-              <Input placeholder="Ex.: Checkmat Campinas" {...register('team')} />
+              <Input
+                placeholder="Ex.: Checkmat Campinas"
+                {...register('team')}
+              />
             </Field>
 
             <Field label="Faixa" error={errors.belt?.message}>
@@ -129,10 +126,7 @@ export function AthleteFormDialog({
               </select>
             </Field>
 
-            <Field
-              label="Data de nascimento"
-              error={errors.birthDate?.message}
-            >
+            <Field label="Data de nascimento" error={errors.birthDate?.message}>
               <Input type="date" {...register('birthDate')} />
             </Field>
 
@@ -148,10 +142,7 @@ export function AthleteFormDialog({
               />
             </Field>
 
-            <Field
-              label="Status pesagem"
-              error={errors.weighInStatus?.message}
-            >
+            <Field label="Status pesagem" error={errors.weighInStatus?.message}>
               <select
                 {...register('weighInStatus')}
                 className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
