@@ -22,7 +22,7 @@ export type Athlete = {
 };
 
 export type AthletePayload = {
-  name: string;
+  fullName: string;
   belt: string;
   birthDate: string;
   declaredWeight: number;
@@ -105,6 +105,22 @@ function gramsToKilograms(value: number | null) {
   return value / 1000;
 }
 
+function normalizeWeightToKilograms(value: number | null) {
+  if (value === null) return null;
+
+  // Values above 100000 are most likely stored in milligrams.
+  if (value >= 100000) {
+    return value / 1_000_000;
+  }
+
+  // Values above a realistic athlete weight are most likely stored in grams.
+  if (value > 250) {
+    return value / 1000;
+  }
+
+  return value;
+}
+
 function readAcademyLabel(
   record: Record<string, unknown>,
   academyId: string | null,
@@ -157,12 +173,6 @@ export function normalizeAthlete(input: unknown): Athlete {
     'dataNascimento',
   ]);
 
-  console.log(
-    'Normalizing athlete with input:',
-    record,
-    'and derived birthDate:',
-    birthDate,
-  );
   const rawAge = readNumber(record, ['age', 'idade']);
   const declaredWeightGrams = readNumber(record, [
     'declaredWeightGrams',
@@ -179,13 +189,14 @@ export function normalizeAthlete(input: unknown): Athlete {
     belt: readString(record, ['belt', 'faixa']),
     birthDate,
     age: calculateAge(birthDate) ?? rawAge,
-    declaredWeight:
+    declaredWeight: normalizeWeightToKilograms(
       readNumber(record, [
         'declaredWeight',
         'weight',
         'pesoDeclarado',
         'peso',
       ]) ?? gramsToKilograms(declaredWeightGrams),
+    ),
     realWeightGrams: readNumber(record, [
       'realWeightGrams',
       'actualWeightGrams',
