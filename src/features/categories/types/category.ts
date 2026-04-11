@@ -18,6 +18,17 @@ export type CategoryDetail = CategorySummary & {
   athletes: Athlete[];
 };
 
+export type CreateCategoryPayload = {
+  name?: string;
+  ageMin: number | null;
+  ageMax: number | null;
+  weightMin: number | null;
+  weightMax: number | null;
+  belt: string;
+  canMerge: boolean;
+  mergeBelt: string | null;
+};
+
 export type CategoriesListResponse =
   | unknown[]
   | {

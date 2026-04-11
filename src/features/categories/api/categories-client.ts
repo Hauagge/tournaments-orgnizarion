@@ -3,6 +3,7 @@ import {
   CategoriesListResponse,
   CategoryDetail,
   CategorySummary,
+  CreateCategoryPayload,
   normalizeCategoriesResponse,
   normalizeCategoryDetail,
 } from '@/features/categories/types/category';
@@ -47,4 +48,27 @@ export function generateCategories(competitionId: string) {
       method: 'POST',
     },
   );
+}
+
+export function createCategory(
+  competitionId: string,
+  payload: CreateCategoryPayload,
+) {
+  const normalizedName = payload.name?.trim() || undefined;
+  const normalizedMergeBelt = payload.canMerge ? payload.mergeBelt : null;
+
+  return apiFetch<unknown>(`/competitions/${competitionId}/categories`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: normalizedName,
+      belt: payload.belt,
+      ageMin: payload.ageMin,
+      ageMax: payload.ageMax,
+      maxAge: payload.ageMax,
+      weightMinGrams: payload.weightMin,
+      weightMaxGrams: payload.weightMax,
+      allowMerge: payload.canMerge,
+      mergeWithBelt: normalizedMergeBelt,
+    }),
+  });
 }

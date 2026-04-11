@@ -6,10 +6,12 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  createCategory,
   generateCategories,
   getCategory,
   listCategories,
 } from '@/features/categories/api/categories-client';
+import { CreateCategoryPayload } from '@/features/categories/types/category';
 
 export const categoriesQueryKey = ['categories'] as const;
 export const categoryDetailQueryKey = ['category-detail'] as const;
@@ -35,6 +37,23 @@ export function useGenerateCategories(competitionId: string | null) {
 
   return useMutation({
     mutationFn: () => generateCategories(competitionId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...categoriesQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: categoryDetailQueryKey,
+      });
+    },
+  });
+}
+
+export function useCreateCategory(competitionId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateCategoryPayload) =>
+      createCategory(competitionId!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...categoriesQueryKey, competitionId],
