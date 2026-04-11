@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { AlertTriangle, Search, UserPlus, X } from 'lucide-react';
 import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { Athlete, getWeighInStatusLabel } from '@/features/athletes/types/athlete';
+import { useBelts } from '@/features/belts/hooks/use-belts';
 import { useDebouncedValue } from '@/shared/hooks/useDebouncedValue';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
@@ -43,7 +44,9 @@ export function KeyGroupBuilder({
 
   const debouncedSearch = useDebouncedValue(search, 250);
   const athletesQuery = useAthletes(competitionId, debouncedSearch);
+  const beltsQuery = useBelts();
   const athletes = useMemo(() => athletesQuery.data ?? [], [athletesQuery.data]);
+  const hasSearchQuery = debouncedSearch.trim().length > 0;
   const selectedIds = useMemo(
     () => new Set(selectedAthletes.map((athlete) => athlete.id)),
     [selectedAthletes],
@@ -59,15 +62,7 @@ export function KeyGroupBuilder({
     return Array.from(options).sort((a, b) => a.localeCompare(b));
   }, [athletes]);
 
-  const beltOptions = useMemo(() => {
-    const options = new Set<string>();
-    athletes.forEach((athlete) => {
-      if (athlete.belt) {
-        options.add(athlete.belt);
-      }
-    });
-    return Array.from(options).sort((a, b) => a.localeCompare(b));
-  }, [athletes]);
+  const beltOptions = useMemo(() => beltsQuery.data ?? [], [beltsQuery.data]);
 
   const filteredSuggestions = useMemo(() => {
     const minWeightNumber = minWeight ? Number(minWeight) : null;
@@ -78,6 +73,10 @@ export function KeyGroupBuilder({
     return athletes
       .filter((athlete) => !selectedIds.has(athlete.id))
       .filter((athlete) => {
+        if (hasSearchQuery) {
+          return true;
+        }
+
         const membership = athleteGroupMap.get(athlete.id);
         return !membership || membership.groupId === currentGroupId;
       })
@@ -101,6 +100,7 @@ export function KeyGroupBuilder({
     athletes,
     beltFilter,
     currentGroupId,
+    hasSearchQuery,
     maxAge,
     maxWeight,
     minAge,
@@ -246,7 +246,9 @@ export function KeyGroupBuilder({
             </div>
           ) : filteredSuggestions.length === 0 ? (
             <div className="px-5 py-6 text-slate-500">
-              Nenhum atleta encontrado para os filtros atuais.
+              {hasSearchQuery
+                ? 'Nenhum atleta encontrado para os filtros atuais.'
+                : 'Nenhum atleta disponível fora de outras chaves para os filtros atuais.'}
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -267,10 +269,15 @@ export function KeyGroupBuilder({
                         {athlete.age ?? '-'} anos · {athlete.declaredWeight ?? '-'} kg
                       </p>
                       {alreadyInAnotherGroup ? (
-                        <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
-                          <AlertTriangle className="h-3.5 w-3.5" />
-                          Já está em {membership.groupName}
-                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <p className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                            Já está em {membership.groupName}
+                          </p>
+                          <p className="inline-flex items-center rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                            Não pode entrar em outra chave
+                          </p>
+                        </div>
                       ) : null}
                     </div>
                     <div className="flex items-center gap-3">

@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueries } from '@tanstack/react-query';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import { Athlete } from '@/features/athletes/types/athlete';
 import { KeyGroupBuilder } from '@/features/key-groups/components/key-group-builder';
+import { getKeyGroup } from '@/features/key-groups/api/key-groups-client';
 import { useCreateKeyGroup, useKeyGroups } from '@/features/key-groups/hooks/use-key-groups';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
@@ -27,15 +29,30 @@ export default function KeyGroupCreatePage() {
   const { toast } = useToast();
   const maxGroupSize = competitionQuery.data?.maxGroupSize ?? 4;
 
+  const keyGroupDetailQueries = useQueries({
+    queries: (keyGroupsQuery.data ?? []).map((group) => ({
+      queryKey: ['key-group-builder-detail', group.id],
+      queryFn: () => getKeyGroup(group.id),
+      enabled: Boolean(activeCompetitionId) && group.athletes.length === 0,
+    })),
+  });
+
+  const resolvedGroups = useMemo(() => {
+    return (keyGroupsQuery.data ?? []).map((group, index) => {
+      const detail = keyGroupDetailQueries[index]?.data;
+      return group.athletes.length > 0 ? group : detail ?? group;
+    });
+  }, [keyGroupDetailQueries, keyGroupsQuery.data]);
+
   const athleteGroupMap = useMemo(() => {
     const map = new Map<string, { groupId: string; groupName: string }>();
-    (keyGroupsQuery.data ?? []).forEach((group) => {
+    resolvedGroups.forEach((group) => {
       group.athletes.forEach((athlete) => {
         map.set(athlete.id, { groupId: group.id, groupName: group.name });
       });
     });
     return map;
-  }, [keyGroupsQuery.data]);
+  }, [resolvedGroups]);
 
   function handleAddAthlete(athlete: Athlete) {
     const membership = athleteGroupMap.get(athlete.id);

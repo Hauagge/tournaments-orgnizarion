@@ -13,6 +13,7 @@ import {
   updateKeyGroup,
 } from '@/features/key-groups/api/key-groups-client';
 import { useKeyGroups } from '@/features/key-groups/hooks/use-key-groups';
+import ReportButtons from '@/features/reports/components/ReportButtons';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
   AlertDialogAction,
@@ -198,6 +199,8 @@ export default function KeyGroupsPage() {
           tone="warning"
         />
       ) : null}
+
+      <ReportButtons compact />
 
       {activeCompetitionId ? (
         <Card className="border-4 border-slate-900 p-0">

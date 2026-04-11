@@ -19,7 +19,7 @@ export function createKeyGroup(competitionId: string, payload: KeyGroupPayload) 
   return apiFetch<unknown>(`/competitions/${competitionId}/key-groups`, {
     method: 'POST',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function getKeyGroup(keyGroupId: string) {
@@ -33,31 +33,31 @@ export function updateKeyGroup(keyGroupId: string, payload: KeyGroupPayload) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function addAthleteToKeyGroup(keyGroupId: string, athleteId: string) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}/athletes/${athleteId}`, {
     method: 'POST',
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function removeAthleteFromKeyGroup(keyGroupId: string, athleteId: string) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}/athletes/${athleteId}`, {
     method: 'DELETE',
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function generateKeyGroupFights(keyGroupId: string) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}/generate-fights`, {
     method: 'POST',
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function lockKeyGroup(keyGroupId: string) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}/lock`, {
     method: 'POST',
-  }).then((response) => normalizeKeyGroup(response) as KeyGroup);
+  }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
 export function getBracketsPdfUrl(competitionId: string) {

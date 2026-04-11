@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useQueries } from '@tanstack/react-query';
 import { ArrowLeft, Lock, Swords } from 'lucide-react';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
@@ -17,6 +18,7 @@ import {
   useLockKeyGroup,
   useUpdateKeyGroup,
 } from '@/features/key-groups/hooks/use-key-groups';
+import { getKeyGroup } from '@/features/key-groups/api/key-groups-client';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
   AlertDialogAction,
@@ -73,6 +75,21 @@ export default function KeyGroupDetailPage({
   const fights = keyGroup?.fights ?? [];
   const isLocked = keyGroup?.locked ?? false;
 
+  const allGroupDetailQueries = useQueries({
+    queries: (allGroupsQuery.data ?? []).map((group) => ({
+      queryKey: ['key-group-builder-detail', group.id],
+      queryFn: () => getKeyGroup(group.id),
+      enabled: Boolean(activeCompetitionId) && group.athletes.length === 0,
+    })),
+  });
+
+  const resolvedGroups = useMemo(() => {
+    return (allGroupsQuery.data ?? []).map((group, index) => {
+      const detail = allGroupDetailQueries[index]?.data;
+      return group.athletes.length > 0 ? group : detail ?? group;
+    });
+  }, [allGroupDetailQueries, allGroupsQuery.data]);
+
   useEffect(() => {
     setNameDraft(keyGroup?.name ?? '');
     setCategoryDraft(keyGroup?.categoryId ?? '');
@@ -81,13 +98,13 @@ export default function KeyGroupDetailPage({
 
   const athleteGroupMap = useMemo(() => {
     const map = new Map<string, { groupId: string; groupName: string }>();
-    (allGroupsQuery.data ?? []).forEach((group) => {
-      group.athletes.forEach((athlete) => {
+    resolvedGroups.forEach((group) => {
+      group.athletes.forEach((athlete: Athlete) => {
         map.set(athlete.id, { groupId: group.id, groupName: group.name });
       });
     });
     return map;
-  }, [allGroupsQuery.data]);
+  }, [resolvedGroups]);
 
   const hasUnsavedChanges = useMemo(() => {
     const persistedIds = persistedAthletes.map((athlete) => athlete.id).sort();
@@ -167,7 +184,6 @@ export default function KeyGroupDetailPage({
       if (current.some((item) => item.id === athlete.id)) {
         return current;
       }
-      console.log('Adicionando atleta à chave:', athlete);
       return [...current, athlete];
     });
   }
