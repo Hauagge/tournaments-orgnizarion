@@ -73,8 +73,10 @@ type FightApiItem = {
   status?: string | null;
   athleteAId?: string | number | null;
   athleteAName?: string | null;
+  academyAName?: string | null;
   athleteBId?: string | number | null;
   athleteBName?: string | null;
+  academyBName?: string | null;
   winnerId?: string | number | null;
   winnerAthleteId?: string | number | null;
   winnerAthleteName?: string | null;
@@ -175,6 +177,7 @@ function normalizeParticipant(
   objectKeys: string[],
   idKeys: string[],
   nameKeys: string[],
+  academyKeys: string[],
 ): FightParticipant {
   const nestedObject = readObject(record, objectKeys);
   if (nestedObject) {
@@ -183,14 +186,19 @@ function normalizeParticipant(
 
   const name = readString(record, nameKeys);
   const id = readIdentifier(record, idKeys);
+  const academy = readString(record, academyKeys);
 
-  if (!name && !id) {
+  if (!name && !id && !academy) {
     return null;
   }
 
   return normalizeAthlete({
     id: id || crypto.randomUUID(),
     name: name || 'Atleta',
+    academy,
+    academyName: academy,
+    team: academy,
+    teamName: academy,
   });
 }
 
@@ -201,12 +209,14 @@ export function normalizeFight(input: unknown): Fight {
     ['athleteA', 'fighterA', 'redAthlete', 'homeAthlete'],
     ['athleteAId', 'fighterAId', 'redAthleteId', 'homeAthleteId'],
     ['athleteAName', 'fighterAName', 'redAthleteName', 'homeAthleteName'],
+    ['academyAName', 'athleteAAcademy', 'fighterAAcademy', 'redAthleteAcademy'],
   );
   const athleteB = normalizeParticipant(
     record,
     ['athleteB', 'fighterB', 'blueAthlete', 'awayAthlete'],
     ['athleteBId', 'fighterBId', 'blueAthleteId', 'awayAthleteId'],
     ['athleteBName', 'fighterBName', 'blueAthleteName', 'awayAthleteName'],
+    ['academyBName', 'athleteBAcademy', 'fighterBAcademy', 'blueAthleteAcademy'],
   );
   const teamMatchId = readIdentifier(record, [
     'teamMatchId',
@@ -253,12 +263,12 @@ export function normalizeFight(input: unknown): Fight {
       readString(record, ['teamMatchName', 'matchName', 'confrontationName']) ||
       (teamMatchId ? `Confronto ${teamMatchId}` : ''),
     teamAName:
-      readString(record, ['teamAName', 'homeTeamName']) ||
+      readString(record, ['teamAName', 'homeTeamName', 'academyAName']) ||
       athleteA?.team ||
       athleteA?.academy ||
       '-',
     teamBName:
-      readString(record, ['teamBName', 'awayTeamName']) ||
+      readString(record, ['teamBName', 'awayTeamName', 'academyBName']) ||
       athleteB?.team ||
       athleteB?.academy ||
       '-',

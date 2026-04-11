@@ -3,7 +3,7 @@ import {
   Athlete,
   AthletePayload,
   AthleteUpdatePayload,
-  normalizeAthlete,
+  normalizeAthleteDetail,
   normalizeAthletesResponse,
 } from '@/features/athletes/types/athlete';
 
@@ -38,12 +38,12 @@ export function createAthlete(competitionId: string, payload: AthletePayload) {
   return apiFetch<unknown>(`/competitions/${competitionId}/athletes`, {
     method: 'POST',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeAthlete(response) as Athlete);
+  }).then((response) => normalizeAthleteDetail(response) as Athlete);
 }
 
 export function updateAthlete(id: string, payload: AthleteUpdatePayload) {
   return apiFetch<unknown>(`/athletes/${id}`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeAthlete(response) as Athlete);
+  }).then((response) => normalizeAthleteDetail(response) as Athlete);
 }

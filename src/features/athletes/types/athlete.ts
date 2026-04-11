@@ -40,6 +40,14 @@ export type AthleteApiResponse =
       items?: unknown[];
     };
 
+type AthleteDetailResponse =
+  | unknown
+  | {
+      data?: unknown;
+      athlete?: unknown;
+      item?: unknown;
+    };
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -184,7 +192,7 @@ export function normalizeAthlete(input: unknown): Athlete {
   const academy = readAcademyLabel(record, academyId);
 
   return {
-    id: readIdentifier(record, ['id', '_id']) || crypto.randomUUID(),
+    id: readIdentifier(record, ['id', '_id', 'athleteId']) || crypto.randomUUID(),
     name: readString(record, ['name', 'nome', 'fullName']),
     belt: readString(record, ['belt', 'faixa']),
     birthDate,
@@ -216,6 +224,24 @@ export function normalizeAthlete(input: unknown): Athlete {
         'status',
       ]) || 'PENDING',
   };
+}
+
+export function normalizeAthleteDetail(response: AthleteDetailResponse): Athlete {
+  const record = isObject(response) ? response : {};
+
+  if (isObject(record.data)) {
+    return normalizeAthlete(record.data);
+  }
+
+  if (isObject(record.athlete)) {
+    return normalizeAthlete(record.athlete);
+  }
+
+  if (isObject(record.item)) {
+    return normalizeAthlete(record.item);
+  }
+
+  return normalizeAthlete(response);
 }
 
 export function normalizeAthletesResponse(
