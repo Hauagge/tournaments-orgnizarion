@@ -14,10 +14,14 @@ import {
 import { FinishFightPayload } from '@/features/fights/types/fight';
 
 export const fightsQueryKey = ['fights'] as const;
+type RefetchIntervalOption =
+  | number
+  | false
+  | ((query: { state: { data?: unknown } }) => number | false | undefined);
 
 export function useFights(
   competitionId: string | null,
-  options?: { refetchInterval?: number | false },
+  options?: { refetchInterval?: RefetchIntervalOption },
 ) {
   return useQuery({
     queryKey: [...fightsQueryKey, competitionId],
