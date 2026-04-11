@@ -1,6 +1,6 @@
 import { apiFetch } from '@/shared/api/fetch-client';
 import {
-  AreaQueue,
+  AreaQueueApiResponse,
   AreasApiResponse,
   CreateAreasPayload,
   normalizeAreaQueueResponse,
@@ -13,7 +13,10 @@ export function listAreas(competitionId: string) {
   }).then(normalizeAreasResponse);
 }
 
-export function createAreas(competitionId: string, payload: CreateAreasPayload) {
+export function createAreas(
+  competitionId: string,
+  payload: CreateAreasPayload,
+) {
   const names = payload.names.filter((name) => name.trim().length > 0);
 
   return apiFetch<unknown>(`/competitions/${competitionId}/areas`, {
@@ -34,7 +37,7 @@ export function distributeAreaFights(competitionId: string) {
 }
 
 export function getAreaQueue(areaId: string) {
-  return apiFetch<AreaQueue>(`/areas/${areaId}/queue`, {
+  return apiFetch<AreaQueueApiResponse>(`/areas/${areaId}/queue`, {
     method: 'GET',
   }).then(normalizeAreaQueueResponse);
 }
