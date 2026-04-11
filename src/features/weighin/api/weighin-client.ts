@@ -1,9 +1,14 @@
-import { Athlete, normalizeAthleteDetail } from '@/features/athletes/types/athlete';
+import {
+  Athlete,
+  WeighInStatus,
+  normalizeAthleteDetail,
+} from '@/features/athletes/types/athlete';
 import { apiFetch } from '@/shared/api/fetch-client';
 
 type ConfirmWeighInPayload = {
   athleteId: string;
   realWeightGrams: number;
+  weighInStatus: Extract<WeighInStatus, 'APPROVED' | 'REJECTED'>;
 };
 // TODO Tirar a validação do peso da pagina da pesagem
 

@@ -94,7 +94,7 @@ export default function WeighInTab() {
   );
   const isMutating = confirmMutation.isPending || resetMutation.isPending;
 
-  async function handleConfirm() {
+  async function handleConfirm(weighInStatus: 'APPROVED' | 'REJECTED') {
     if (!selectedAthlete || !activeCompetitionId || parsedWeightGrams === null) {
       return;
     }
@@ -103,14 +103,24 @@ export default function WeighInTab() {
       const updatedAthlete = await confirmMutation.mutateAsync({
         athleteId: selectedAthlete.id,
         realWeightGrams: parsedWeightGrams,
+        weighInStatus,
       });
 
       setSelectedAthlete(updatedAthlete);
       setRealWeightInput((parsedWeightGrams / 1000).toFixed(3));
-      setFeedback({ tone: 'success', text: 'Pesagem confirmada.' });
+      setFeedback({
+        tone: 'success',
+        text:
+          weighInStatus === 'APPROVED'
+            ? 'Pesagem aprovada.'
+            : 'Pesagem reprovada.',
+      });
       toast({
-        title: 'Pesagem confirmada',
-        description: `${updatedAthlete.name} foi homologado com sucesso.`,
+        title:
+          weighInStatus === 'APPROVED'
+            ? 'Pesagem aprovada'
+            : 'Pesagem reprovada',
+        description: `${updatedAthlete.name} foi atualizado com sucesso.`,
         variant: 'success',
       });
     } catch (error) {
@@ -156,7 +166,7 @@ export default function WeighInTab() {
     }
 
     event.preventDefault();
-    void handleConfirm();
+    void handleConfirm('APPROVED');
   }
 
   return (
@@ -335,18 +345,26 @@ export default function WeighInTab() {
                       </div>
                       <p className="text-sm text-slate-500">
                         {parsedWeightGrams !== null
-                          ? `${parsedWeightGrams} g prontos para envio.`
-                          : 'Digite um peso valido para confirmar.'}
+                          ? `${parsedWeightGrams} g prontos para envio. Escolha aprovar ou reprovar.`
+                          : 'Digite um peso valido para continuar.'}
                       </p>
                     </label>
 
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <Button
-                        onClick={() => void handleConfirm()}
+                        onClick={() => void handleConfirm('APPROVED')}
                         disabled={!canConfirm || isMutating}
                         className="h-14 flex-1 rounded-2xl border-4 border-emerald-900 bg-emerald-600 text-base font-black uppercase tracking-[0.12em] hover:bg-emerald-700"
                       >
-                        {confirmMutation.isPending ? 'Confirmando...' : 'Confirmar pesagem'}
+                        {confirmMutation.isPending ? 'Salvando...' : 'Aprovar pesagem'}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => void handleConfirm('REJECTED')}
+                        disabled={!canConfirm || isMutating}
+                        className="h-14 flex-1 rounded-2xl border-4 border-amber-900 bg-amber-500 text-base font-black uppercase tracking-[0.12em] text-amber-950 hover:bg-amber-400"
+                      >
+                        {confirmMutation.isPending ? 'Salvando...' : 'Reprovar pesagem'}
                       </Button>
                       <Button
                         variant="destructive"
@@ -359,7 +377,7 @@ export default function WeighInTab() {
                     </div>
 
                     <p className="text-sm text-slate-500">
-                      Pressione Enter no campo de peso para confirmar quando o valor estiver valido.
+                      Pressione Enter no campo de peso para aprovar rapidamente quando o valor estiver válido.
                     </p>
                   </>
                 ) : (

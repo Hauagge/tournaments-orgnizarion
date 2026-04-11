@@ -14,10 +14,17 @@ export function useConfirmWeighIn(competitionId: string | null) {
     mutationFn: ({
       athleteId,
       realWeightGrams,
+      weighInStatus,
     }: {
       athleteId: string;
       realWeightGrams: number;
-    }) => confirmWeighIn(competitionId!, { athleteId, realWeightGrams }),
+      weighInStatus: 'APPROVED' | 'REJECTED';
+    }) =>
+      confirmWeighIn(competitionId!, {
+        athleteId,
+        realWeightGrams,
+        weighInStatus,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...athletesQueryKey, competitionId],
