@@ -3,15 +3,21 @@
 import { useMemo, useState } from 'react';
 import { Filter, LoaderCircle, Search } from 'lucide-react';
 import { getWeighInStatusLabel } from '@/features/athletes/types/athlete';
+import { useBelts } from '@/features/belts/hooks/use-belts';
 import {
   useCategories,
   useCategory,
+  useCreateCategory,
   useGenerateCategories,
 } from '@/features/categories/hooks/use-categories';
-import { CategorySummary } from '@/features/categories/types/category';
+import {
+  CategorySummary,
+  CreateCategoryPayload,
+} from '@/features/categories/types/category';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
+import { Checkbox } from '@/shared/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -30,10 +36,22 @@ import {
 } from '@/shared/ui/table';
 import { useToast } from '@/shared/ui/use-toast';
 
+const initialFormState: CreateCategoryPayload = {
+  name: '',
+  ageMin: null,
+  ageMax: null,
+  weightMin: null,
+  weightMax: null,
+  belt: '',
+  canMerge: false,
+  mergeBelt: null,
+};
+
 export default function CategoriesPage() {
   const [search, setSearch] = useState('');
   const [beltFilter, setBeltFilter] = useState('ALL');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState<CreateCategoryPayload>(initialFormState);
 
   const activeCompetitionId = useCompetitionStore(
     (state) => state.activeCompetitionId,
@@ -42,21 +60,13 @@ export default function CategoriesPage() {
   const { toast } = useToast();
 
   const categoriesQuery = useCategories(activeCompetitionId);
+  const beltsQuery = useBelts();
   const generateMutation = useGenerateCategories(activeCompetitionId);
+  const createMutation = useCreateCategory(activeCompetitionId);
   const categoryDetailQuery = useCategory(selectedCategoryId);
 
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
-  const beltOptions = useMemo(() => {
-    const options = new Set<string>();
-
-    categories.forEach((category) => {
-      if (category.belt) {
-        options.add(category.belt);
-      }
-    });
-
-    return Array.from(options).sort((a, b) => a.localeCompare(b));
-  }, [categories]);
+  const beltOptions = useMemo(() => beltsQuery.data ?? [], [beltsQuery.data]);
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -70,6 +80,21 @@ export default function CategoriesPage() {
       return matchesSearch && matchesBelt;
     });
   }, [beltFilter, categories, search]);
+
+  function updateCreateForm<K extends keyof CreateCategoryPayload>(
+    key: K,
+    value: CreateCategoryPayload[K],
+  ) {
+    setCreateForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function handleNumberFieldChange(
+    key: 'ageMin' | 'ageMax' | 'weightMin' | 'weightMax',
+    value: string,
+  ) {
+    const trimmed = value.trim();
+    updateCreateForm(key, trimmed === '' ? null : Number(trimmed));
+  }
 
   async function handleGenerateCategories() {
     if (!activeCompetitionId) {
@@ -86,6 +111,76 @@ export default function CategoriesPage() {
     } catch (error) {
       toast({
         title: 'Falha ao gerar categorias',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function handleCreateCategory() {
+    if (!activeCompetitionId) {
+      return;
+    }
+
+    if (!createForm.belt.trim()) {
+      toast({
+        title: 'Faixa obrigatória',
+        description: 'Selecione a cor da faixa para criar a categoria.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (
+      createForm.ageMin !== null &&
+      createForm.ageMax !== null &&
+      createForm.ageMin > createForm.ageMax
+    ) {
+      toast({
+        title: 'Faixa etária inválida',
+        description: 'A idade mínima não pode ser maior que a idade máxima.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (
+      createForm.weightMin !== null &&
+      createForm.weightMax !== null &&
+      createForm.weightMin > createForm.weightMax
+    ) {
+      toast({
+        title: 'Faixa de peso inválida',
+        description: 'O peso mínimo não pode ser maior que o peso máximo.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (createForm.canMerge && !createForm.mergeBelt) {
+      toast({
+        title: 'Faixa de mesclagem obrigatória',
+        description: 'Informe com qual faixa essa categoria pode mesclar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        ...createForm,
+        name: createForm.name?.trim() || undefined,
+      });
+      setCreateForm(initialFormState);
+      toast({
+        title: 'Categoria criada',
+        description: 'A categoria manual foi adicionada à competição.',
+        variant: 'success',
+      });
+    } catch (error) {
+      toast({
+        title: 'Falha ao criar categoria',
         description:
           error instanceof Error ? error.message : 'Tente novamente.',
         variant: 'destructive',
@@ -132,6 +227,173 @@ export default function CategoriesPage() {
 
       {activeCompetitionId && (
         <>
+          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+            <CardContent className="space-y-5 p-5">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  Criar categoria manualmente
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Defina os limites da categoria e a regra de mesclagem antes de salvar.
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <label className="block space-y-2 xl:col-span-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Nome
+                  </span>
+                  <Input
+                    value={createForm.name ?? ''}
+                    onChange={(event) => updateCreateForm('name', event.target.value)}
+                    placeholder="Opcional. Ex.: Juvenil azul leve"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Idade mínima
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={createForm.ageMin ?? ''}
+                    onChange={(event) =>
+                      handleNumberFieldChange('ageMin', event.target.value)
+                    }
+                    placeholder="Opcional"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Idade máxima
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={createForm.ageMax ?? ''}
+                    onChange={(event) =>
+                      handleNumberFieldChange('ageMax', event.target.value)
+                    }
+                    placeholder="Opcional"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Peso mínimo
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={createForm.weightMin ?? ''}
+                    onChange={(event) =>
+                      handleNumberFieldChange('weightMin', event.target.value)
+                    }
+                    placeholder="Opcional"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Peso máximo
+                  </span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={createForm.weightMax ?? ''}
+                    onChange={(event) =>
+                      handleNumberFieldChange('weightMax', event.target.value)
+                    }
+                    placeholder="Opcional"
+                  />
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Cor da faixa
+                  </span>
+                  <select
+                    value={createForm.belt}
+                    onChange={(event) => updateCreateForm('belt', event.target.value)}
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione</option>
+                    {beltOptions.map((belt) => (
+                      <option key={belt} value={belt}>
+                        {belt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Pode mesclar
+                  </span>
+                  <label className="flex h-10 items-center gap-3 rounded-md border border-gray-300 px-3 text-sm text-slate-700">
+                    <Checkbox
+                      checked={createForm.canMerge}
+                      onCheckedChange={(checked) => {
+                        updateCreateForm('canMerge', checked);
+                        if (!checked) {
+                          updateCreateForm('mergeBelt', null);
+                        }
+                      }}
+                    />
+                    Permitir mesclagem
+                  </label>
+                </div>
+
+                <label className="block space-y-2 xl:col-span-2">
+                  <span className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Mesclar com faixa
+                  </span>
+                  <select
+                    value={createForm.mergeBelt ?? ''}
+                    onChange={(event) =>
+                      updateCreateForm(
+                        'mergeBelt',
+                        event.target.value || null,
+                      )
+                    }
+                    disabled={!createForm.canMerge}
+                    className="h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <option value="">Selecione</option>
+                    {beltOptions.map((belt) => (
+                      <option key={belt} value={belt}>
+                        {belt}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => void handleCreateCategory()}
+                  disabled={!activeCompetitionId || createMutation.isPending}
+                  className="h-12 rounded-2xl border-4 border-slate-900 bg-amber-300 px-5 text-sm font-black uppercase tracking-[0.12em] text-slate-950 hover:bg-amber-200"
+                >
+                  {createMutation.isPending ? 'Salvando...' : 'Criar categoria'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCreateForm(initialFormState)}
+                  disabled={createMutation.isPending}
+                  className="h-12 rounded-2xl border-4 border-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] text-slate-900 hover:bg-slate-100"
+                >
+                  Limpar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-4 border-slate-900 p-0">
             <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_220px]">
               <label className="block space-y-2">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useBelts } from '@/features/belts/hooks/use-belts';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
@@ -13,7 +14,7 @@ import {
   TableCell,
 } from '@/shared/ui/table';
 import { useAthleteStore } from '@/shared/stores/useAthleteStore';
-import { Athlete, BeltsEnum, GenderEnum } from '@/shared/lib/types';
+import { Athlete, GenderEnum } from '@/shared/lib/types';
 import {
   Select,
   SelectContent,
@@ -62,6 +63,8 @@ export default function AthleteTabs({
   setNewAthlete,
   createAthleteSignal = 0,
 }: AthleteTabProps) {
+  const beltsQuery = useBelts();
+  const beltOptions = useMemo(() => beltsQuery.data ?? [], [beltsQuery.data]);
   const { athletes, addAthlete, updateAthletePartial, deleteAthlete } =
     useAthleteStore();
   const { removeFromCategory } = useCategoryStore();
@@ -392,10 +395,7 @@ export default function AthleteTabs({
                         onValueChange={(value) =>
                           setNewAthlete({
                             ...newAthlete,
-                            belt:
-                              (BeltsEnum[
-                                value as keyof typeof BeltsEnum
-                              ] as Athlete['belt']) || '',
+                            belt: value as Athlete['belt'],
                           })
                         }
                       >
@@ -403,7 +403,7 @@ export default function AthleteTabs({
                           <p>{newAthlete.belt || 'Faixa'}</p>
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.values(BeltsEnum).map((belt) => (
+                          {beltOptions.map((belt) => (
                             <SelectItem key={belt} value={belt}>
                               {belt}
                             </SelectItem>
