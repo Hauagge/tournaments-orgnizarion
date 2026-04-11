@@ -1,17 +1,10 @@
 import Link from 'next/link';
 import { CompetitionSwitcher } from '@/features/competitions/components/competition-switcher';
+import { CompetitionSectionNav } from '@/features/competitions/components/competition-section-nav';
 
 const navItems = [
   { href: '/dashboard', label: 'Painel' },
   { href: '/competitions', label: 'Competições' },
-  { href: '/athletes', label: 'Atletas' },
-  { href: '/imports/athletes', label: 'Importações' },
-  { href: '/academies', label: 'Academias' },
-  { href: '/weigh-in', label: 'Pesagem' },
-  { href: '/categories', label: 'Categorias' },
-  { href: '/key-groups', label: 'Chaves' },
-  { href: '/fights', label: 'Lutas' },
-  { href: '/areas', label: 'Áreas' },
 ];
 
 export default function AdminLayout({
@@ -43,6 +36,7 @@ export default function AdminLayout({
           <div className="mb-6 flex justify-end">
             <CompetitionSwitcher />
           </div>
+          <CompetitionSectionNav />
           {children}
         </main>
       </div>
