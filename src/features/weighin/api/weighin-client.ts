@@ -10,9 +10,7 @@ type ConfirmWeighInPayload = {
   realWeightGrams: number;
   weighInStatus: Extract<WeighInStatus, 'APPROVED' | 'REJECTED'>;
 };
-// TODO Tirar a validação do peso da pagina da pesagem
 
-//TODO adicionar numero de documento na inscrição do atleta, para facilitar a conferência na pesagem
 export function confirmWeighIn(
   competitionId: string,
   payload: ConfirmWeighInPayload,
