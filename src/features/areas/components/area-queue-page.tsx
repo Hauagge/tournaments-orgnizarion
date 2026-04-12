@@ -32,7 +32,6 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
   const { toast } = useToast();
  // TODO: Adicionar mais lutas na fila e mostrar em tela
 
- //TODO:Adicionar campo de confirmação de pagamento de pagamento: PENDENTE, PAGO, ISENTO
   const area = queueQuery.data?.area ?? null;
   const nextFight = queueQuery.data?.nextFight ?? null;
   const queue = queueQuery.data?.queue ?? [];
