@@ -6,6 +6,14 @@ export const weighInStatusOptions = [
 
 export type WeighInStatus = (typeof weighInStatusOptions)[number];
 
+export const paymentStatusOptions = [
+  'PAID',
+  'PENDING',
+  'EXEMPT',
+] as const;
+
+export type PaymentStatus = (typeof paymentStatusOptions)[number];
+
 export type Athlete = {
   id: string;
   name: string;
@@ -20,6 +28,7 @@ export type Athlete = {
   teamId: string | null;
   team: string;
   weighInStatus: string;
+  paymentStatus: PaymentStatus;
 };
 
 export type AthletePayload = {
@@ -30,6 +39,7 @@ export type AthletePayload = {
   declaredWeight: number;
   team: string;
   weighInStatus?: WeighInStatus;
+  paymentStatus?: PaymentStatus;
 };
 
 export type AthleteUpdatePayload = Partial<AthletePayload>;
@@ -154,6 +164,14 @@ function readAcademyLabel(
   return '';
 }
 
+function normalizePaymentStatus(value: string): PaymentStatus {
+  if (value === 'PAID' || value === 'PENDING' || value === 'EXEMPT') {
+    return value;
+  }
+
+  return 'PENDING';
+}
+
 export function calculateAge(date: string | null) {
   if (!date) return null;
 
@@ -231,6 +249,13 @@ export function normalizeAthlete(input: unknown): Athlete {
         'statusPesagem',
         'status',
       ]) || 'PENDING',
+    paymentStatus: normalizePaymentStatus(
+      readString(record, [
+        'paymentStatus',
+        'registrationPaymentStatus',
+        'statusPagamento',
+      ]) || 'PENDING',
+    ),
   };
 }
 
@@ -276,6 +301,19 @@ export function getWeighInStatusLabel(status: string) {
       return 'Reprovada';
     case 'PENDING':
       return 'Pendente';
+    default:
+      return status;
+  }
+}
+
+export function getPaymentStatusLabel(status: string) {
+  switch (status) {
+    case 'PAID':
+      return 'PAGO';
+    case 'EXEMPT':
+      return 'ISENTO';
+    case 'PENDING':
+      return 'PENDENTE';
     default:
       return status;
   }
