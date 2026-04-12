@@ -55,6 +55,15 @@ export default function KeyGroupCreatePage() {
   }, [resolvedGroups]);
 
   function handleAddAthlete(athlete: Athlete) {
+    if (athlete.weighInStatus !== 'APPROVED') {
+      toast({
+        title: 'Pesagem inválida para chave',
+        description: `${athlete.name} está com pesagem ${athlete.weighInStatus === 'PENDING' ? 'pendente' : 'reprovada'} e não pode ser adicionado.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const membership = athleteGroupMap.get(athlete.id);
     if (membership) {
       toast({

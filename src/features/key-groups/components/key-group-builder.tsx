@@ -256,6 +256,7 @@ export function KeyGroupBuilder({
                 const membership = athleteGroupMap.get(athlete.id);
                 const alreadyInAnotherGroup =
                   membership && membership.groupId !== currentGroupId;
+                const hasInvalidWeighInStatus = athlete.weighInStatus !== 'APPROVED';
 
                 return (
                   <div
@@ -291,7 +292,8 @@ export function KeyGroupBuilder({
                           isBusy ||
                           isLocked ||
                           selectedAthletes.length >= maxSize ||
-                          Boolean(alreadyInAnotherGroup)
+                          Boolean(alreadyInAnotherGroup) ||
+                          hasInvalidWeighInStatus
                         }
                       >
                         <UserPlus className="mr-2 h-4 w-4" />
