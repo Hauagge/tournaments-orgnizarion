@@ -9,6 +9,7 @@ export type WeighInStatus = (typeof weighInStatusOptions)[number];
 export type Athlete = {
   id: string;
   name: string;
+  documentNumber: string;
   belt: string;
   birthDate: string | null;
   age: number | null;
@@ -23,6 +24,7 @@ export type Athlete = {
 
 export type AthletePayload = {
   fullName: string;
+  documentNumber: string;
   belt: string;
   birthDate: string;
   declaredWeight: number;
@@ -194,6 +196,12 @@ export function normalizeAthlete(input: unknown): Athlete {
   return {
     id: readIdentifier(record, ['id', '_id', 'athleteId']) || crypto.randomUUID(),
     name: readString(record, ['name', 'nome', 'fullName']),
+    documentNumber: readString(record, [
+      'documentNumber',
+      'document',
+      'rg',
+      'documento',
+    ]),
     belt: readString(record, ['belt', 'faixa']),
     birthDate,
     age: calculateAge(birthDate) ?? rawAge,

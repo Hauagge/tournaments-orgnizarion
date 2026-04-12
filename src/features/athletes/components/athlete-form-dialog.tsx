@@ -46,6 +46,7 @@ export function AthleteFormDialog({
     resolver: zodResolver(athleteFormSchema),
     defaultValues: {
       fullName: athlete?.name ?? '',
+      documentNumber: athlete?.documentNumber ?? '',
       belt: athlete?.belt ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
@@ -61,6 +62,7 @@ export function AthleteFormDialog({
   useEffect(() => {
     form.reset({
       fullName: athlete?.name ?? '',
+      documentNumber: athlete?.documentNumber ?? '',
       belt: athlete?.belt ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
@@ -109,6 +111,13 @@ export function AthleteFormDialog({
               <Input
                 placeholder="Ex.: Checkmat Campinas"
                 {...register('team')}
+              />
+            </Field>
+
+            <Field label="RG" error={errors.documentNumber?.message}>
+              <Input
+                placeholder="Ex.: 12.345.678-9"
+                {...register('documentNumber')}
               />
             </Field>
 

@@ -3,6 +3,7 @@ import { weighInStatusOptions } from '@/features/athletes/types/athlete';
 
 export const athleteFormSchema = z.object({
   fullName: z.string().min(2, 'Informe o nome do atleta.'),
+  documentNumber: z.string().min(1, 'Informe o RG do atleta.'),
   belt: z.string().min(1, 'Selecione a faixa.'),
   birthDate: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
     message: 'Informe uma data de nascimento válida.',
