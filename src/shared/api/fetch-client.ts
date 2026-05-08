@@ -24,6 +24,15 @@ function getBaseUrl() {
   return baseUrl?.replace(/\/$/, '') ?? '';
 }
 
+function getAuthToken() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const token = localStorage.getItem('auth-token');
+  return token && token.trim().length > 0 ? token : null;
+}
+
 async function parseBody(response: Response) {
   const contentType = response.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
@@ -40,13 +49,20 @@ export async function apiFetch<TResponse>(
 ): Promise<TResponse> {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
   const isFormDataBody = init?.body instanceof FormData;
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+
+  if (!isFormDataBody && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const response = await fetch(url, {
     ...init,
-    headers: {
-      ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   const payload = await parseBody(response);
