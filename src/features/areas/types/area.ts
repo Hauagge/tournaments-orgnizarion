@@ -7,6 +7,7 @@ export type Area = {
   competitionId?: number;
   order?: number;
   nextFight: Fight | null;
+  queue: Fight[];
 };
 
 export type AreaQueue = {
@@ -191,6 +192,7 @@ export function normalizeArea(input: unknown): Area {
       : queue[0]
         ? normalizeAreaFight(queue[0])
         : null,
+    queue: queue.map(normalizeAreaFight),
   };
 }
 

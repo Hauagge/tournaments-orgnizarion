@@ -179,9 +179,17 @@ export default function AreasPage() {
                               <p className="mt-1 text-sm text-slate-600">
                                 {area.queueCount} luta(s) na fila
                               </p>
-                              <p className="mt-2 text-sm text-slate-500">
-                                Proxima: {formatFightLabel(area.nextFight)}
-                              </p>
+                              <div className="mt-3 space-y-1 text-sm text-slate-500">
+                                {getAreaPreviewFights(area).length === 0 ? (
+                                  <p>Nenhuma luta distribuida</p>
+                                ) : (
+                                  getAreaPreviewFights(area).map((fight, index) => (
+                                    <p key={`${fight.id}-${index}`}>
+                                      {index + 1}. {formatFightLabel(fight)}
+                                    </p>
+                                  ))
+                                )}
+                              </div>
                             </div>
                             <ArrowRight className="h-5 w-5 text-slate-500" />
                           </div>
@@ -205,6 +213,37 @@ function formatFightLabel(fight: { athleteA?: { name?: string } | null; athleteB
   }
 
   return `${fight.athleteA?.name || 'A definir'} vs ${fight.athleteB?.name || 'A definir'}`;
+}
+
+function getAreaPreviewFights(area: {
+  nextFight:
+    | {
+        id?: string;
+        athleteA?: { name?: string } | null;
+        athleteB?: { name?: string } | null;
+      }
+    | null;
+  queue: Array<{
+    id?: string;
+    athleteA?: { name?: string } | null;
+    athleteB?: { name?: string } | null;
+  }>;
+}) {
+  const fights = [area.nextFight, ...area.queue].filter(
+    (fight): fight is NonNullable<typeof fight> => Boolean(fight),
+  );
+  const seen = new Set<string>();
+
+  return fights
+    .filter((fight, index) => {
+      const key = fight.id ?? `fight-${index}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
 }
 
 function StateCard({
