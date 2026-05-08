@@ -238,7 +238,7 @@ export default function DashboardPage() {
 
       {activeCompetitionId && !isLoading && !isError ? (
         <>
-          <section className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+          <section className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
             {dashboardAreas.length === 0 ? (
               <StateCard
                 message="Nenhuma área encontrada para a competição ativa."
