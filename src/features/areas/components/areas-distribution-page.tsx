@@ -95,9 +95,17 @@ export default function AreasDistributionPage() {
                     <div className="rounded-2xl border-4 border-slate-900 bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:bg-amber-50">
                       <p className="text-lg font-black text-slate-950">{area.name}</p>
                       <p className="mt-2 text-sm text-slate-600">Fila atual: {area.queueCount} luta(s)</p>
-                      <p className="mt-2 text-sm text-slate-500">
-                        Proxima: {area.nextFight ? `${area.nextFight.athleteA?.name || 'A definir'} vs ${area.nextFight.athleteB?.name || 'A definir'}` : 'Nenhuma luta distribuida'}
-                      </p>
+                      <div className="mt-3 space-y-1 text-sm text-slate-500">
+                        {getAreaPreviewFights(area).length === 0 ? (
+                          <p>Nenhuma luta distribuida</p>
+                        ) : (
+                          getAreaPreviewFights(area).map((fight, index) => (
+                            <p key={`${fight.id}-${index}`}>
+                              {index + 1}. {formatFightLabel(fight)}
+                            </p>
+                          ))
+                        )}
+                      </div>
                     </div>
                   </Link>
                 ))}
@@ -141,4 +149,43 @@ function InlineState({
       : 'border-slate-300 bg-white text-slate-600';
 
   return <div className={`rounded-2xl border p-4 text-sm ${className}`}>{message}</div>;
+}
+
+function formatFightLabel(fight: { athleteA?: { name?: string } | null; athleteB?: { name?: string } | null } | null) {
+  if (!fight) {
+    return 'Nenhuma luta distribuida';
+  }
+
+  return `${fight.athleteA?.name || 'A definir'} vs ${fight.athleteB?.name || 'A definir'}`;
+}
+
+function getAreaPreviewFights(area: {
+  nextFight:
+    | {
+        id?: string;
+        athleteA?: { name?: string } | null;
+        athleteB?: { name?: string } | null;
+      }
+    | null;
+  queue: Array<{
+    id?: string;
+    athleteA?: { name?: string } | null;
+    athleteB?: { name?: string } | null;
+  }>;
+}) {
+  const fights = [area.nextFight, ...area.queue].filter(
+    (fight): fight is NonNullable<typeof fight> => Boolean(fight),
+  );
+  const seen = new Set<string>();
+
+  return fights
+    .filter((fight, index) => {
+      const key = fight.id ?? `fight-${index}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 5);
 }
