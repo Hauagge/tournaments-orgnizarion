@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Clock3, Play, Trophy } from 'lucide-react';
+import { useAuthStore } from '@/features/auth/stores/useAuthStore';
+import { FightScoreboardDialog } from '@/features/fights/components/fight-scoreboard-dialog';
 import {
   useFinishFight,
   useFights,
@@ -33,6 +35,10 @@ import {
   TableRow,
 } from '@/shared/ui/table';
 import { useToast } from '@/shared/ui/use-toast';
+import { useCompetitionSocket } from '@/hooks/useCompetitionSocket';
+import { clearAreaScoreboardState } from '@/features/fights/lib/scoreboard-sync';
+
+const POLLING_INTERVAL = 4000;
 
 const winTypeOptions = [
   'POINTS',
@@ -74,6 +80,13 @@ export default function FightsTab() {
   const [areaFilter, setAreaFilter] = useState('ALL');
   const [selectedFightId, setSelectedFightId] = useState<string | null>(null);
   const [finishFightId, setFinishFightId] = useState<string | null>(null);
+  const [finishPreset, setFinishPreset] = useState<{
+    fightId: string;
+    winnerId: string;
+    winType: (typeof winTypeOptions)[number];
+  } | null>(null);
+  const [scoreboardFightId, setScoreboardFightId] = useState<string | null>(null);
+  const [scoreboardAutoStartToken, setScoreboardAutoStartToken] = useState(0);
   const [winnerId, setWinnerId] = useState('');
   const [winType, setWinType] =
     useState<(typeof winTypeOptions)[number]>('POINTS');
@@ -83,7 +96,28 @@ export default function FightsTab() {
     (state) => state.activeCompetitionId,
   );
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
-  const fightsQuery = useFights(activeCompetitionId);
+  const token = useAuthStore((state) => state.token);
+  const realtime = useCompetitionSocket({
+    token,
+    competitionId: activeCompetitionId,
+  });
+  const isRealtimeActive =
+    realtime.connected && !realtime.joining && !realtime.joinError;
+  const fightsQuery = useFights(activeCompetitionId, {
+    refetchInterval: (query) =>
+      isRealtimeActive
+        ? false
+        : Array.isArray(query.state.data) &&
+            query.state.data.some(
+              (fight) =>
+                typeof fight === 'object' &&
+                fight !== null &&
+                'status' in fight &&
+                (fight.status === 'IN_PROGRESS' || fight.status === 'SCHEDULED'),
+            )
+          ? POLLING_INTERVAL
+          : false,
+  });
   const startMutation = useStartFight(activeCompetitionId);
   const finishMutation = useFinishFight(activeCompetitionId);
   const { toast } = useToast();
@@ -97,6 +131,10 @@ export default function FightsTab() {
     () => fights.find((fight) => fight.id === finishFightId) ?? null,
     [fights, finishFightId],
   );
+  const scoreboardFight = useMemo(
+    () => fights.find((fight) => fight.id === scoreboardFightId) ?? null,
+    [fights, scoreboardFightId],
+  );
 
   useEffect(() => {
     if (!fightToFinish) {
@@ -105,11 +143,17 @@ export default function FightsTab() {
       return;
     }
 
+    if (finishPreset && finishPreset.fightId === fightToFinish.id) {
+      setWinnerId(finishPreset.winnerId);
+      setWinType(finishPreset.winType);
+      return;
+    }
+
     const firstAvailableWinner =
       fightToFinish.athleteA?.id ?? fightToFinish.athleteB?.id ?? '';
     setWinnerId(firstAvailableWinner);
     setWinType('POINTS');
-  }, [fightToFinish]);
+  }, [fightToFinish, finishPreset]);
 
   useEffect(() => {
     setCurrentTime(new Date());
@@ -163,6 +207,8 @@ export default function FightsTab() {
   async function handleStartFight(fightId: string) {
     try {
       await startMutation.mutateAsync(fightId);
+      setScoreboardFightId(fightId);
+      setScoreboardAutoStartToken(Date.now());
       toast({
         title: 'Luta iniciada',
         description: 'O status da luta foi atualizado.',
@@ -184,10 +230,15 @@ export default function FightsTab() {
     }
 
     try {
+      const finishedFightAreaId = fightToFinish.areaId;
       await finishMutation.mutateAsync({
         fightId: fightToFinish.id,
         payload: { winnerId, winType },
       });
+      if (finishedFightAreaId) {
+        clearAreaScoreboardState(finishedFightAreaId);
+      }
+      setFinishPreset(null);
       setFinishFightId(null);
       toast({
         title: 'Luta finalizada',
@@ -202,6 +253,16 @@ export default function FightsTab() {
         variant: 'destructive',
       });
     }
+  }
+
+  function handleSubmissionFinishSelection(fightId: string, selectedWinnerId: string) {
+    setFinishPreset({
+      fightId,
+      winnerId: selectedWinnerId,
+      winType: 'SUBMISSION',
+    });
+    setScoreboardFightId(null);
+    setFinishFightId(fightId);
   }
 
   return (
@@ -347,6 +408,9 @@ export default function FightsTab() {
                           onOpen={() => setSelectedFightId(fight.id)}
                           onStart={handleStartFight}
                           onFinish={(fightId) => setFinishFightId(fightId)}
+                          onOpenScoreboard={(fightId) =>
+                            setScoreboardFightId(fightId)
+                          }
                         />
                       ))}
                     </div>
@@ -377,6 +441,9 @@ export default function FightsTab() {
                           onOpen={() => setSelectedFightId(fight.id)}
                           onStart={handleStartFight}
                           onFinish={(fightId) => setFinishFightId(fightId)}
+                          onOpenScoreboard={(fightId) =>
+                            setScoreboardFightId(fightId)
+                          }
                         />
                       ))}
                     </div>
@@ -436,6 +503,9 @@ export default function FightsTab() {
                           isFinishing={finishMutation.isPending}
                           onStart={handleStartFight}
                           onFinish={(fightId) => setFinishFightId(fightId)}
+                          onOpenScoreboard={(fightId) =>
+                            setScoreboardFightId(fightId)
+                          }
                         />
                       </CardContent>
                     </Card>
@@ -510,6 +580,9 @@ export default function FightsTab() {
                                 onFinish={(fightId) =>
                                   setFinishFightId(fightId)
                                 }
+                                onOpenScoreboard={(fightId) =>
+                                  setScoreboardFightId(fightId)
+                                }
                               />
                             </TableCell>
                           </TableRow>
@@ -527,14 +600,32 @@ export default function FightsTab() {
             onClose={() => setSelectedFightId(null)}
             onStart={handleStartFight}
             onFinish={(fightId) => setFinishFightId(fightId)}
+            onOpenScoreboard={(fightId) => setScoreboardFightId(fightId)}
             isStarting={startMutation.isPending}
             isFinishing={finishMutation.isPending}
+          />
+
+          <FightScoreboardDialog
+            fight={scoreboardFight}
+            isOpen={Boolean(scoreboardFight)}
+            initialDurationSeconds={300}
+            autoStartToken={scoreboardAutoStartToken}
+            onClose={() => setScoreboardFightId(null)}
+            onSubmissionFinishSelection={handleSubmissionFinishSelection}
+            onFinish={(fightId) => {
+              setFinishPreset(null);
+              setScoreboardFightId(null);
+              setFinishFightId(fightId);
+            }}
           />
 
           <FinishFightDialog
             fight={fightToFinish}
             isOpen={Boolean(fightToFinish)}
-            onClose={() => setFinishFightId(null)}
+            onClose={() => {
+              setFinishPreset(null);
+              setFinishFightId(null);
+            }}
             winnerId={winnerId}
             winType={winType}
             onWinnerChange={setWinnerId}
@@ -556,12 +647,14 @@ function FightActions({
   isFinishing,
   onStart,
   onFinish,
+  onOpenScoreboard,
 }: {
   fight: Fight;
   isStarting: boolean;
   isFinishing: boolean;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
+  onOpenScoreboard?: (fightId: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -582,6 +675,15 @@ function FightActions({
         <Trophy className="mr-2 h-4 w-4" />
         Finalizar
       </Button>
+      {fight.status === 'IN_PROGRESS' && onOpenScoreboard ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenScoreboard(fight.id)}
+        >
+          Placar
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -619,6 +721,7 @@ function LiveFightCard({
   onOpen,
   onStart,
   onFinish,
+  onOpenScoreboard,
 }: {
   fight: Fight;
   isStarting: boolean;
@@ -626,6 +729,7 @@ function LiveFightCard({
   onOpen: () => void;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
+  onOpenScoreboard: (fightId: string) => void;
 }) {
   return (
     <Card className="overflow-hidden border-4 border-red-300 bg-gradient-to-br from-red-100 via-orange-50 to-white p-0 shadow-[6px_6px_0_0_rgba(127,29,29,0.18)]">
@@ -674,6 +778,7 @@ function LiveFightCard({
           isFinishing={isFinishing}
           onStart={onStart}
           onFinish={onFinish}
+          onOpenScoreboard={onOpenScoreboard}
         />
       </CardContent>
     </Card>
@@ -687,6 +792,7 @@ function UpcomingFightCard({
   onOpen,
   onStart,
   onFinish,
+  onOpenScoreboard,
 }: {
   fight: Fight;
   isStarting: boolean;
@@ -694,6 +800,7 @@ function UpcomingFightCard({
   onOpen: () => void;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
+  onOpenScoreboard: (fightId: string) => void;
 }) {
   return (
     <Card className="overflow-hidden border-4 border-slate-900 bg-white p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
@@ -746,6 +853,7 @@ function UpcomingFightCard({
           isFinishing={isFinishing}
           onStart={onStart}
           onFinish={onFinish}
+          onOpenScoreboard={onOpenScoreboard}
         />
       </CardContent>
     </Card>
@@ -807,6 +915,7 @@ function FightDetailDrawer({
   onClose,
   onStart,
   onFinish,
+  onOpenScoreboard,
   isStarting,
   isFinishing,
 }: {
@@ -815,6 +924,7 @@ function FightDetailDrawer({
   onClose: () => void;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
+  onOpenScoreboard: (fightId: string) => void;
   isStarting: boolean;
   isFinishing: boolean;
 }) {
@@ -825,7 +935,7 @@ function FightDetailDrawer({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="left-auto right-0 top-0 h-screen w-full max-w-lg translate-x-0 translate-y-0 rounded-none border-l-4 border-slate-900 p-0">
+      <DialogContent className="left-0 top-0 h-screen w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[90vh] sm:w-[min(92vw,64rem)] sm:max-w-5xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:border-4 sm:border-slate-900">
         <div className="flex h-full flex-col bg-white">
           <DialogHeader className="border-b-4 border-slate-900 px-6 py-5 text-left">
             <DialogTitle className="text-xl font-black text-slate-950">
@@ -906,6 +1016,15 @@ function FightDetailDrawer({
               >
                 Finalizar
               </Button>
+              {fight.status === 'IN_PROGRESS' ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenScoreboard(fight.id)}
+                >
+                  Placar
+                </Button>
+              ) : null}
             </DialogFooter>
           ) : null}
         </div>
