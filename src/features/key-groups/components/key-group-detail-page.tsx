@@ -129,6 +129,32 @@ export default function KeyGroupDetailPage({
     () => buildAthleteReadinessSummary(athletesDraft),
     [athletesDraft],
   );
+  const keyGroupStatus = useMemo(() => {
+    if (isLocked) {
+      return {
+        label: 'Travada',
+        description:
+          'A chave foi finalizada e já pode seguir para a distribuição das áreas.',
+        tone: 'locked' as const,
+      };
+    }
+
+    if (fights.length > 0) {
+      return {
+        label: 'Lutas geradas',
+        description:
+          'Os confrontos já existem. Revise as outras chaves antes de distribuir.',
+        tone: 'generated' as const,
+      };
+    }
+
+    return {
+      label: 'Aberta',
+      description:
+        'A chave ainda está em montagem e precisa ser revisada antes da geração das lutas.',
+      tone: 'open' as const,
+    };
+  }, [fights.length, isLocked]);
 
   async function handleSaveKeyGroup() {
     if (!keyGroup) {
@@ -352,12 +378,20 @@ export default function KeyGroupDetailPage({
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Detalhe da chave
                 </p>
+                <div className="mt-3">
+                  <StatusBadge tone={keyGroupStatus.tone}>
+                    {keyGroupStatus.label}
+                  </StatusBadge>
+                </div>
                 <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
                   {keyGroup.name}
                 </h1>
                 <p className="mt-3 max-w-3xl text-slate-600">
                   Ajuste os atletas da chave, gere os confrontos todos contra
                   todos e trave quando a montagem estiver pronta.
+                </p>
+                <p className="mt-2 max-w-3xl text-sm font-medium text-slate-700">
+                  {keyGroupStatus.description}
                 </p>
               </div>
 
@@ -440,6 +474,42 @@ export default function KeyGroupDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {isLocked ? (
+            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-emerald-950">
+                    Chave pronta para a próxima etapa
+                  </h2>
+                  <p className="text-sm text-emerald-900">
+                    Esta chave já foi travada. Agora o próximo passo útil é distribuir as lutas nas áreas.
+                  </p>
+                </div>
+                <Link href="/areas/distribution">
+                  <Button className="w-full lg:w-auto">Ir para distribuição</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : fights.length > 0 ? (
+            <Card className="border-4 border-slate-900 bg-slate-50 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.15)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-slate-950">
+                    Continue revisando as chaves
+                  </h2>
+                  <p className="text-sm text-slate-700">
+                    As lutas desta chave já foram geradas. Volte para a listagem e siga a revisão das demais chaves antes da distribuição.
+                  </p>
+                </div>
+                <Link href="/key-groups">
+                  <Button variant="outline" className="w-full lg:w-auto">
+                    Voltar para chaves
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border-4 border-slate-900 p-0">
             <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_280px_auto] lg:items-end">
@@ -673,6 +743,29 @@ function ReadinessMetric({
       </p>
       <p className="mt-2 text-3xl font-black">{value}</p>
     </div>
+  );
+}
+
+function StatusBadge({
+  tone,
+  children,
+}: {
+  tone: 'open' | 'generated' | 'locked';
+  children: string;
+}) {
+  const className =
+    tone === 'locked'
+      ? 'border-slate-900 bg-slate-900 text-white'
+      : tone === 'generated'
+        ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+        : 'border-amber-300 bg-amber-50 text-amber-950';
+
+  return (
+    <span
+      className={`inline-flex rounded-full border-2 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] ${className}`}
+    >
+      {children}
+    </span>
   );
 }
 
