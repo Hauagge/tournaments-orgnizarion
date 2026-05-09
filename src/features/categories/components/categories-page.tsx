@@ -17,7 +17,7 @@ import {
   CategorySummary,
   CreateCategoryPayload,
 } from '@/features/categories/types/category';
-import { useGenerateFights } from '@/features/fights/hooks/use-fights';
+import { useFights, useGenerateFights } from '@/features/fights/hooks/use-fights';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
   AlertDialogAction,
@@ -65,6 +65,7 @@ export default function CategoriesPage() {
   const [beltFilter, setBeltFilter] = useState('ALL');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isGenerateFightsDialogOpen, setIsGenerateFightsDialogOpen] = useState(false);
+  const [hasJustGeneratedFights, setHasJustGeneratedFights] = useState(false);
   const [createForm, setCreateForm] = useState<CreateCategoryPayload>(initialFormState);
 
   const activeCompetitionId = useCompetitionStore(
@@ -76,6 +77,7 @@ export default function CategoriesPage() {
   const categoriesQuery = useCategories(activeCompetitionId);
   const athletesQuery = useAthletes(activeCompetitionId, '');
   const beltsQuery = useBelts();
+  const fightsQuery = useFights(activeCompetitionId);
   const generateMutation = useGenerateCategories(activeCompetitionId);
   const createMutation = useCreateCategory(activeCompetitionId);
   const generateFightsMutation = useGenerateFights(activeCompetitionId);
@@ -83,6 +85,7 @@ export default function CategoriesPage() {
 
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const athletes = useMemo(() => athletesQuery.data ?? [], [athletesQuery.data]);
+  const fights = useMemo(() => fightsQuery.data ?? [], [fightsQuery.data]);
   const beltOptions = useMemo(() => beltsQuery.data ?? [], [beltsQuery.data]);
   const athleteReadiness = useMemo(
     () => buildAthleteReadinessSummary(athletes),
@@ -101,6 +104,12 @@ export default function CategoriesPage() {
       return matchesSearch && matchesBelt;
     });
   }, [beltFilter, categories, search]);
+  const categoriesWithAthletes = useMemo(
+    () => categories.filter((category) => category.totalAthletes > 0).length,
+    [categories],
+  );
+  const generatedFightsCount = fights.length;
+  const hasGeneratedFights = generatedFightsCount > 0;
 
   function updateCreateForm<K extends keyof CreateCategoryPayload>(
     key: K,
@@ -246,6 +255,7 @@ export default function CategoriesPage() {
     try {
       await generateFightsMutation.mutateAsync();
       setIsGenerateFightsDialogOpen(false);
+      setHasJustGeneratedFights(true);
       toast({
         title: 'Lutas geradas',
         description: 'Os confrontos da competição ativa foram atualizados.',
@@ -324,6 +334,53 @@ export default function CategoriesPage() {
             <CardContent className="space-y-4 p-5">
               <div className="space-y-1">
                 <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  Fluxo do GP absoluto
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Nesta competição, o caminho correto é: categorias, gerar lutas, distribuir áreas e então operar as chamadas.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <ReadinessMetric
+                  label="Categorias totais"
+                  value={String(categories.length)}
+                />
+                <ReadinessMetric
+                  label="Com atletas"
+                  value={String(categoriesWithAthletes)}
+                  tone={categoriesWithAthletes > 0 ? 'success' : 'default'}
+                />
+                <ReadinessMetric
+                  label="Lutas geradas"
+                  value={String(generatedFightsCount)}
+                  tone={hasGeneratedFights ? 'success' : 'default'}
+                />
+                <ReadinessMetric
+                  label="Etapa atual"
+                  value={hasGeneratedFights ? 'Distribuir' : 'Categorias'}
+                  tone={hasGeneratedFights ? 'success' : 'warning'}
+                />
+              </div>
+
+              <div
+                className={`rounded-2xl border-2 p-4 text-sm ${
+                  hasGeneratedFights
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                    : 'border-amber-300 bg-amber-50 text-amber-950'
+                }`}
+              >
+                {hasGeneratedFights
+                  ? 'As lutas desta competição já existem. O próximo passo operacional é distribuir as áreas.'
+                  : 'Você ainda está na etapa de preparação. Revise ou gere as categorias antes de avançar para as lutas.'}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+            <CardContent className="space-y-4 p-5">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black tracking-tight text-slate-950">
                   Prontidão para gerar lutas
                 </h2>
                 <p className="text-sm text-slate-600">
@@ -389,6 +446,24 @@ export default function CategoriesPage() {
               )}
             </CardContent>
           </Card>
+
+          {hasJustGeneratedFights ? (
+            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-emerald-950">
+                    Lutas prontas para a próxima etapa
+                  </h2>
+                  <p className="text-sm text-emerald-900">
+                    A geração foi concluída. Agora siga para a distribuição das áreas para preparar a operação.
+                  </p>
+                </div>
+                <Link href="/areas/distribution">
+                  <Button className="w-full lg:w-auto">Ir para distribuição</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
             <CardContent className="space-y-5 p-5">
