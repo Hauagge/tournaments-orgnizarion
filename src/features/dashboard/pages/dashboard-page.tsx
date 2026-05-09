@@ -6,8 +6,10 @@ import { useQueries } from '@tanstack/react-query';
 import { Activity, ArrowRight, Clock3, Radar } from 'lucide-react';
 import { getAreaQueue } from '@/features/areas/api/areas-client';
 import { useAreas } from '@/features/areas/hooks/use-areas';
+import { useAuthStore } from '@/features/auth/stores/useAuthStore';
 import { AreaQueue } from '@/features/areas/types/area';
 import { useFights } from '@/features/fights/hooks/use-fights';
+import { useCompetitionSocket } from '@/hooks/useCompetitionSocket';
 import {
   Fight,
   FightStatus,
@@ -33,28 +35,58 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | FightStatus>('ALL');
   const activeCompetitionId = useCompetitionStore((state) => state.activeCompetitionId);
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
+  const token = useAuthStore((state) => state.token);
+  const realtime = useCompetitionSocket({
+    token,
+    competitionId: activeCompetitionId,
+  });
+  const isRealtimeActive =
+    realtime.connected && !realtime.joining && !realtime.joinError;
+  const shouldPollCompetitionData = (fights: Fight[]) =>
+    fights.some(
+      (fight) =>
+        fight.status === 'IN_PROGRESS' || fight.status === 'SCHEDULED',
+    );
   const areasQuery = useAreas(activeCompetitionId, {
     refetchInterval: (query) =>
-      Array.isArray(query.state.data) && query.state.data.length > 0
-        ? POLLING_INTERVAL
-        : false,
+      isRealtimeActive
+        ? false
+        : Array.isArray(query.state.data) &&
+            query.state.data.some(
+              (area) => area.queueCount > 0 || area.nextFight !== null,
+            )
+          ? POLLING_INTERVAL
+          : false,
   });
   const fightsQuery = useFights(activeCompetitionId, {
     refetchInterval: (query) =>
-      Array.isArray(query.state.data) && query.state.data.length > 0
-        ? POLLING_INTERVAL
-        : false,
+      isRealtimeActive
+        ? false
+        : Array.isArray(query.state.data) && shouldPollCompetitionData(query.state.data as Fight[])
+          ? POLLING_INTERVAL
+          : false,
   });
   const areas = areasQuery.data ?? [];
   const fights = fightsQuery.data ?? [];
+  const shouldPollQueues = !isRealtimeActive && shouldPollCompetitionData(fights);
 
   const queueQueries = useQueries({
-    queries: areas.map((area) => ({
-      queryKey: ['dashboard-area-queue', area.id],
-      queryFn: () => getAreaQueue(area.id),
-      enabled: Boolean(activeCompetitionId),
-      refetchInterval: POLLING_INTERVAL,
-    })),
+    queries: areas.map((area) => {
+      const shouldPollAreaQueue =
+        shouldPollQueues && (area.queueCount > 0 || area.nextFight !== null);
+      const refetchInterval: number | false = shouldPollAreaQueue
+        ? POLLING_INTERVAL
+        : false;
+
+      return {
+        queryKey: ['dashboard-area-queue', area.id],
+        queryFn: () => getAreaQueue(area.id),
+        enabled:
+          Boolean(activeCompetitionId) &&
+          (isRealtimeActive || shouldPollAreaQueue),
+        refetchInterval,
+      };
+    }),
   });
 
   const areaQueueMap = useMemo(() => {
