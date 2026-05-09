@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Clock3, Play, Trophy } from 'lucide-react';
 import { useAuthStore } from '@/features/auth/stores/useAuthStore';
+import { useCompetition } from '@/features/competitions/hooks/use-competitions';
+import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
 import { FightScoreboardDialog } from '@/features/fights/components/fight-scoreboard-dialog';
 import {
   useFinishFight,
@@ -97,6 +100,7 @@ export default function FightsTab() {
   );
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
   const token = useAuthStore((state) => state.token);
+  const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const realtime = useCompetitionSocket({
     token,
     competitionId: activeCompetitionId,
@@ -203,6 +207,34 @@ export default function FightsTab() {
         return orderA - orderB;
       });
   }, [areaFilteredFights]);
+  const unassignedFights = useMemo(
+    () => fights.filter((fight) => !fight.areaId),
+    [fights],
+  );
+  const flowEntry = getCompetitionEntry(competitionQuery.data?.mode ?? 'KEYS');
+  const contextualNextStep = useMemo(() => {
+    if (fights.length === 0) {
+      return {
+        href: flowEntry.href,
+        label: flowEntry.label,
+        title: 'A competição ainda não tem lutas geradas.',
+        description:
+          'Volte para a etapa correta do fluxo e gere os confrontos antes de operar as áreas.',
+      };
+    }
+
+    if (unassignedFights.length > 0) {
+      return {
+        href: '/areas/distribution',
+        label: 'Ir para distribuição',
+        title: 'Existem lutas sem área definida.',
+        description:
+          `${unassignedFights.length} luta(s) ainda precisam entrar nas filas das áreas antes da operação.`,
+      };
+    }
+
+    return null;
+  }, [fights.length, flowEntry.href, flowEntry.label, unassignedFights.length]);
 
   async function handleStartFight(fightId: string) {
     try {
@@ -311,7 +343,7 @@ export default function FightsTab() {
       {activeCompetitionId && (
         <>
           <Card className="border-4 border-slate-900 p-0">
-            <CardContent className="grid gap-4 p-5 lg:grid-cols-[1.2fr_repeat(3,minmax(0,0.6fr))]">
+            <CardContent className="grid gap-4 p-5 lg:grid-cols-[1.2fr_repeat(4,minmax(0,0.55fr))]">
               <label className="block space-y-2">
                 <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
                   <Clock3 className="h-4 w-4" />
@@ -342,11 +374,51 @@ export default function FightsTab() {
                 tone="upcoming"
               />
               <MetricTile
+                label="Sem área"
+                value={String(unassignedFights.length)}
+                tone={unassignedFights.length > 0 ? 'warning' : 'default'}
+              />
+              <MetricTile
                 label="Total"
                 value={String(areaFilteredFights.length)}
               />
             </CardContent>
           </Card>
+
+          {contextualNextStep ? (
+            <Card className="border-4 border-amber-300 bg-amber-50 p-0 shadow-[6px_6px_0_0_rgba(120,53,15,0.14)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-900">
+                    Próxima ação recomendada
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-slate-950">
+                    {contextualNextStep.title}
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm text-slate-700">
+                    {contextualNextStep.description}
+                  </p>
+                </div>
+
+                <Link href={contextualNextStep.href}>
+                  <Button className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800">
+                    {contextualNextStep.label}
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(6,95,70,0.12)]">
+              <CardContent className="p-5">
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-900">
+                  Operação liberada
+                </p>
+                <p className="mt-2 text-sm text-emerald-950">
+                  As lutas já estão geradas e distribuídas. A tela pode permanecer focada em monitoramento e operação.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {fightsQuery.isLoading && <StateCard message="Carregando lutas..." />}
 
@@ -695,13 +767,15 @@ function MetricTile({
 }: {
   label: string;
   value: string;
-  tone?: 'default' | 'live' | 'upcoming';
+  tone?: 'default' | 'live' | 'upcoming' | 'warning';
 }) {
   const className =
     tone === 'live'
       ? 'border-red-300 bg-red-50 text-red-900'
       : tone === 'upcoming'
         ? 'border-sky-300 bg-sky-50 text-sky-900'
+        : tone === 'warning'
+          ? 'border-amber-300 bg-amber-50 text-amber-900'
         : 'border-slate-300 bg-slate-50 text-slate-900';
 
   return (
