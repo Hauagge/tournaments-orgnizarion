@@ -3,33 +3,49 @@
 import Link from 'next/link';
 import { ArrowLeftRight } from 'lucide-react';
 import { useAreas, useDistributeAreaFights } from '@/features/areas/hooks/use-areas';
+import { useCompetition } from '@/features/competitions/hooks/use-competitions';
+import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
+import { useFights } from '@/features/fights/hooks/use-fights';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
 import { useToast } from '@/shared/ui/use-toast';
 
 export default function AreasDistributionPage() {
+  const [hasJustDistributed, setHasJustDistributed] = useState(false);
   const activeCompetitionId = useCompetitionStore((state) => state.activeCompetitionId);
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
+  const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const areasQuery = useAreas(activeCompetitionId);
+  const fightsQuery = useFights(activeCompetitionId);
   const distributeMutation = useDistributeAreaFights(activeCompetitionId);
   const { toast } = useToast();
 
   const areas = areasQuery.data ?? [];
+  const fights = fightsQuery.data ?? [];
+  const distributedFights = fights.filter((fight) => Boolean(fight.areaId));
+  const pendingDistributionFights = fights.filter((fight) => !fight.areaId);
+  const flowEntry = getCompetitionEntry(competitionQuery.data?.mode ?? 'KEYS');
+  const canDistribute =
+    fights.length > 0 &&
+    areas.length > 0 &&
+    pendingDistributionFights.length > 0;
 
   async function handleDistribute() {
-    if (!activeCompetitionId) {
+    if (!activeCompetitionId || !canDistribute) {
       return;
     }
 
     try {
       await distributeMutation.mutateAsync();
+      setHasJustDistributed(true);
       toast({
         title: 'Lutas distribuidas',
         description: 'As filas das areas foram atualizadas.',
         variant: 'success',
       });
     } catch (error) {
+      setHasJustDistributed(false);
       toast({
         title: 'Falha ao distribuir lutas',
         description: error instanceof Error ? error.message : 'Tente novamente.',
@@ -56,8 +72,19 @@ export default function AreasDistributionPage() {
 
           <Button
             onClick={() => void handleDistribute()}
-            disabled={!activeCompetitionId || !hasHydrated || distributeMutation.isPending}
-            className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800"
+            disabled={
+              !activeCompetitionId ||
+              !hasHydrated ||
+              distributeMutation.isPending ||
+              areasQuery.isLoading ||
+              fightsQuery.isLoading ||
+              !canDistribute
+            }
+            className={`h-14 rounded-2xl border-4 border-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] ${
+              canDistribute
+                ? 'bg-slate-900 hover:bg-slate-800'
+                : 'bg-slate-200 text-slate-500 hover:bg-slate-200'
+            }`}
           >
             <ArrowLeftRight className="mr-2 h-4 w-4" />
             {distributeMutation.isPending ? 'Distribuindo...' : 'Distribuir lutas'}
@@ -77,6 +104,97 @@ export default function AreasDistributionPage() {
       {activeCompetitionId && (
         <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
           <CardContent className="space-y-4 p-5">
+            {fightsQuery.isLoading ? <InlineState message="Carregando lutas..." /> : null}
+            {fightsQuery.isError ? (
+              <InlineState
+                message={
+                  fightsQuery.error instanceof Error
+                    ? fightsQuery.error.message
+                    : 'Falha ao carregar lutas.'
+                }
+                tone="error"
+              />
+            ) : null}
+
+            {!fightsQuery.isLoading && !fightsQuery.isError ? (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <ValidationMetric
+                  label="Lutas totais"
+                  value={String(fights.length)}
+                />
+                <ValidationMetric
+                  label="Lutas pendentes"
+                  value={String(pendingDistributionFights.length)}
+                  tone={
+                    pendingDistributionFights.length > 0 ? 'warning' : 'default'
+                  }
+                />
+                <ValidationMetric
+                  label="Lutas distribuídas"
+                  value={String(distributedFights.length)}
+                  tone={
+                    distributedFights.length > 0 ? 'success' : 'default'
+                  }
+                />
+                <ValidationMetric
+                  label="Áreas cadastradas"
+                  value={String(areas.length)}
+                  tone={areas.length > 0 ? 'success' : 'warning'}
+                />
+              </div>
+            ) : null}
+
+            {!fightsQuery.isLoading && !fightsQuery.isError ? (
+              canDistribute ? (
+                <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  A competição está pronta para distribuir lutas: existem confrontos pendentes e áreas disponíveis.
+                </div>
+              ) : (
+                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-semibold">
+                    A distribuição ainda não é a próxima ação recomendada.
+                  </p>
+                  <p className="mt-1">
+                    Revise primeiro o ponto do fluxo que ainda está bloqueando a montagem das filas.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {fights.length === 0 ? (
+                      <Link href={flowEntry.href}>
+                        <Button type="button">
+                          {flowEntry.label}
+                        </Button>
+                      </Link>
+                    ) : null}
+                    {areas.length === 0 ? (
+                      <Link href="/areas">
+                        <Button type="button" variant="outline">
+                          Configurar áreas
+                        </Button>
+                      </Link>
+                    ) : null}
+                  </div>
+                </div>
+              )
+            ) : null}
+
+            {hasJustDistributed ? (
+              <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
+                <p className="font-semibold">
+                  Distribuição concluída.
+                </p>
+                <p className="mt-1">
+                  O próximo passo recomendado é abrir a operação das áreas para iniciar as chamadas.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <Link href="/areas">
+                    <Button type="button">
+                      Abrir operação das áreas
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+
             {areasQuery.isLoading && <InlineState message="Carregando areas..." />}
             {areasQuery.isError && (
               <InlineState
@@ -149,6 +267,32 @@ function InlineState({
       : 'border-slate-300 bg-white text-slate-600';
 
   return <div className={`rounded-2xl border p-4 text-sm ${className}`}>{message}</div>;
+}
+
+function ValidationMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'success' | 'warning';
+}) {
+  const className =
+    tone === 'success'
+      ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+      : tone === 'warning'
+        ? 'border-amber-300 bg-amber-50 text-amber-950'
+        : 'border-slate-300 bg-slate-50 text-slate-950';
+
+  return (
+    <div className={`rounded-2xl border-2 p-4 ${className}`}>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
+  );
 }
 
 function formatFightLabel(fight: { athleteA?: { name?: string } | null; athleteB?: { name?: string } | null } | null) {
