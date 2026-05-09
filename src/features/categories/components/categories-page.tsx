@@ -1,8 +1,11 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Filter, LoaderCircle, Search, Swords } from 'lucide-react';
 import { getWeighInStatusLabel } from '@/features/athletes/types/athlete';
+import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
+import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { useBelts } from '@/features/belts/hooks/use-belts';
 import {
   useCategories,
@@ -71,6 +74,7 @@ export default function CategoriesPage() {
   const { toast } = useToast();
 
   const categoriesQuery = useCategories(activeCompetitionId);
+  const athletesQuery = useAthletes(activeCompetitionId, '');
   const beltsQuery = useBelts();
   const generateMutation = useGenerateCategories(activeCompetitionId);
   const createMutation = useCreateCategory(activeCompetitionId);
@@ -78,7 +82,12 @@ export default function CategoriesPage() {
   const categoryDetailQuery = useCategory(selectedCategoryId);
 
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const athletes = useMemo(() => athletesQuery.data ?? [], [athletesQuery.data]);
   const beltOptions = useMemo(() => beltsQuery.data ?? [], [beltsQuery.data]);
+  const athleteReadiness = useMemo(
+    () => buildAthleteReadinessSummary(athletes),
+    [athletes],
+  );
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -205,6 +214,26 @@ export default function CategoriesPage() {
       return;
     }
 
+    if (athleteReadiness.approvedAthletes < 2) {
+      toast({
+        title: 'Atletas insuficientes para gerar lutas',
+        description:
+          'A competição precisa de pelo menos 2 atletas com pesagem aprovada.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    if (athleteReadiness.pendingWeighIn > 0) {
+      toast({
+        title: 'Finalize a pesagem antes de gerar lutas',
+        description:
+          `${athleteReadiness.pendingWeighIn} atleta(s) ainda estão com pesagem pendente.`,
+        variant: 'warning',
+      });
+      return;
+    }
+
     if (categories.length === 0) {
       toast({
         title: 'Sem categorias para gerar lutas',
@@ -256,8 +285,10 @@ export default function CategoriesPage() {
               disabled={
                 !activeCompetitionId ||
                 !hasHydrated ||
+                athletesQuery.isLoading ||
                 categoriesQuery.isLoading ||
                 categories.length === 0 ||
+                !athleteReadiness.canGenerateCompetitionFights ||
                 generateFightsMutation.isPending
               }
               className="h-14 rounded-2xl border-4 border-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] text-slate-900 hover:bg-amber-100"
@@ -289,6 +320,76 @@ export default function CategoriesPage() {
 
       {activeCompetitionId && (
         <>
+          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+            <CardContent className="space-y-4 p-5">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  Prontidão para gerar lutas
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Antes de gerar os confrontos, confirme se a base de atletas já está pronta.
+                </p>
+              </div>
+
+              {athletesQuery.isLoading ? (
+                <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
+                  Carregando prontidão dos atletas...
+                </div>
+              ) : (
+                <>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <ReadinessMetric
+                      label="Atletas totais"
+                      value={String(athleteReadiness.totalAthletes)}
+                    />
+                    <ReadinessMetric
+                      label="Pesagem aprovada"
+                      value={String(athleteReadiness.approvedAthletes)}
+                      tone="success"
+                    />
+                    <ReadinessMetric
+                      label="Pesagem pendente"
+                      value={String(athleteReadiness.pendingWeighIn)}
+                      tone={athleteReadiness.pendingWeighIn > 0 ? 'warning' : 'default'}
+                    />
+                    <ReadinessMetric
+                      label="Pesagem reprovada"
+                      value={String(athleteReadiness.rejectedWeighIn)}
+                      tone={athleteReadiness.rejectedWeighIn > 0 ? 'warning' : 'default'}
+                    />
+                  </div>
+
+                  {athleteReadiness.canGenerateCompetitionFights ? (
+                    <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+                      A base está pronta para gerar lutas: existem pelo menos 2 atletas aprovados e não há pesagens pendentes.
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                      <p className="font-semibold">
+                        A geração de lutas ainda não é a próxima ação recomendada.
+                      </p>
+                      <p className="mt-1">
+                        Finalize a preparação dos atletas antes de seguir para os confrontos.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-3">
+                        <Link href="/athletes">
+                          <Button type="button" variant="outline">
+                            Revisar atletas
+                          </Button>
+                        </Link>
+                        <Link href="/weigh-in">
+                          <Button type="button">
+                            Finalizar pesagem
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
             <CardContent className="space-y-5 p-5">
               <div className="space-y-1">
@@ -598,6 +699,32 @@ export default function CategoriesPage() {
           </AlertDialog>
         </>
       )}
+    </div>
+  );
+}
+
+function ReadinessMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'success' | 'warning';
+}) {
+  const className =
+    tone === 'success'
+      ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+      : tone === 'warning'
+        ? 'border-amber-300 bg-amber-50 text-amber-950'
+        : 'border-slate-300 bg-slate-50 text-slate-950';
+
+  return (
+    <div className={`rounded-2xl border-2 p-4 ${className}`}>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
     </div>
   );
 }
