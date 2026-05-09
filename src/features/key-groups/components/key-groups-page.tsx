@@ -13,6 +13,7 @@ import {
   updateKeyGroup,
 } from '@/features/key-groups/api/key-groups-client';
 import { useKeyGroups } from '@/features/key-groups/hooks/use-key-groups';
+import { KeyGroup } from '@/features/key-groups/types/key-group';
 import ReportButtons from '@/features/reports/components/ReportButtons';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
@@ -38,6 +39,9 @@ import { useToast } from '@/shared/ui/use-toast';
 
 export default function KeyGroupsPage() {
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'INCOMPLETE' | 'WITHOUT_FIGHTS' | 'LOCKED'
+  >('ALL');
   const [pendingRemoval, setPendingRemoval] = useState<{
     groupId: string;
     groupName: string;
@@ -55,27 +59,74 @@ export default function KeyGroupsPage() {
   const keyGroups = keyGroupsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
   const maxGroupSize = competitionQuery.data?.maxGroupSize ?? 4;
-
-  const filteredKeyGroups = useMemo(() => {
-    return keyGroups.filter(
-      (group) => categoryFilter === 'ALL' || group.categoryId === categoryFilter,
-    );
-  }, [categoryFilter, keyGroups]);
+  const filteredKeyGroups = useMemo(
+    () =>
+      keyGroups.filter(
+        (group) =>
+          categoryFilter === 'ALL' || group.categoryId === categoryFilter,
+      ),
+    [categoryFilter, keyGroups],
+  );
 
   const detailQueries = useQueries({
     queries: filteredKeyGroups.map((group) => ({
       queryKey: ['key-group-list-detail', group.id],
       queryFn: () => getKeyGroup(group.id),
-      enabled: Boolean(activeCompetitionId) && group.athletes.length === 0,
+      enabled: Boolean(activeCompetitionId),
     })),
   });
 
-  const displayGroups = useMemo(() => {
-    return filteredKeyGroups.map((group, index) => {
-      const detail = detailQueries[index]?.data;
-      return group.athletes.length > 0 ? group : detail ?? group;
-    });
-  }, [detailQueries, filteredKeyGroups]);
+  const displayGroups = useMemo(
+    () =>
+      filteredKeyGroups.map((group, index) => {
+        const detail = detailQueries[index]?.data;
+        return detail ?? group;
+      }),
+    [detailQueries, filteredKeyGroups],
+  );
+  const readinessMetrics = useMemo(() => {
+    const incompleteCount = displayGroups.filter((group) =>
+      isGroupIncomplete(group),
+    ).length;
+    const withoutFightsCount = displayGroups.filter((group) =>
+      hasGroupWithoutFights(group),
+    ).length;
+    const lockedCount = displayGroups.filter((group) => group.locked).length;
+
+    return {
+      totalCount: displayGroups.length,
+      incompleteCount,
+      withoutFightsCount,
+      lockedCount,
+    };
+  }, [displayGroups]);
+  const groupsByStatus = useMemo(
+    () =>
+      displayGroups.filter((group) => {
+        if (statusFilter === 'INCOMPLETE') {
+          return isGroupIncomplete(group);
+        }
+        if (statusFilter === 'WITHOUT_FIGHTS') {
+          return hasGroupWithoutFights(group);
+        }
+        if (statusFilter === 'LOCKED') {
+          return group.locked;
+        }
+        return true;
+      }),
+    [displayGroups, statusFilter],
+  );
+  const firstPendingGroup = useMemo(
+    () =>
+      displayGroups.find(
+        (group) => isGroupIncomplete(group) || hasGroupWithoutFights(group),
+      ) ?? null,
+    [displayGroups],
+  );
+  const canAdvanceToDistribution =
+    readinessMetrics.totalCount > 0 &&
+    readinessMetrics.incompleteCount === 0 &&
+    readinessMetrics.withoutFightsCount === 0;
 
   const removeAthleteMutation = useMutation({
     mutationFn: ({
@@ -203,27 +254,118 @@ export default function KeyGroupsPage() {
       <ReportButtons compact />
 
       {activeCompetitionId ? (
-        <Card className="border-4 border-slate-900 p-0">
-          <CardContent className="grid gap-4 p-5 lg:grid-cols-[280px_1fr]">
-            <label className="block space-y-2">
-              <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
-                Categoria
-              </span>
-              <select
-                value={categoryFilter}
-                onChange={(event) => setCategoryFilter(event.target.value)}
-                className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
-              >
-                <option value="ALL">Todas</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </CardContent>
-        </Card>
+        <>
+          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+            <CardContent className="space-y-4 p-5">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  Prontidão das chaves
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Use este resumo para saber rapidamente o que ainda bloqueia a distribuição das áreas.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <KeyGroupMetric
+                  label="Chaves totais"
+                  value={String(readinessMetrics.totalCount)}
+                />
+                <KeyGroupMetric
+                  label="Incompletas"
+                  value={String(readinessMetrics.incompleteCount)}
+                  tone={readinessMetrics.incompleteCount > 0 ? 'warning' : 'default'}
+                />
+                <KeyGroupMetric
+                  label="Sem lutas"
+                  value={String(readinessMetrics.withoutFightsCount)}
+                  tone={readinessMetrics.withoutFightsCount > 0 ? 'warning' : 'default'}
+                />
+                <KeyGroupMetric
+                  label="Travadas"
+                  value={String(readinessMetrics.lockedCount)}
+                  tone={readinessMetrics.lockedCount > 0 ? 'success' : 'default'}
+                />
+              </div>
+
+              {canAdvanceToDistribution ? (
+                <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  Todas as chaves filtradas já estão prontas para seguir para distribuição.
+                </div>
+              ) : (
+                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  Ainda existem chaves pendentes. Revise primeiro as chaves incompletas ou sem lutas geradas antes de distribuir.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="border-4 border-slate-900 p-0">
+            <CardContent className="grid gap-4 p-5 lg:grid-cols-[280px_280px_1fr_auto] lg:items-end">
+              <label className="block space-y-2">
+                <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  Categoria
+                </span>
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                >
+                  <option value="ALL">Todas</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block space-y-2">
+                <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  Estado operacional
+                </span>
+                <select
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(
+                      event.target.value as
+                        | 'ALL'
+                        | 'INCOMPLETE'
+                        | 'WITHOUT_FIGHTS'
+                        | 'LOCKED',
+                    )
+                  }
+                  className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                >
+                  <option value="ALL">Todas</option>
+                  <option value="INCOMPLETE">Incompletas</option>
+                  <option value="WITHOUT_FIGHTS">Sem lutas</option>
+                  <option value="LOCKED">Travadas</option>
+                </select>
+              </label>
+
+              <div className="text-sm text-slate-600">
+                {canAdvanceToDistribution
+                  ? 'Fluxo liberado para distribuição.'
+                  : 'Ainda existem pendências antes da distribuição.'}
+              </div>
+
+              {canAdvanceToDistribution ? (
+                <Link href="/areas/distribution">
+                  <Button>Ir para distribuição</Button>
+                </Link>
+              ) : firstPendingGroup ? (
+                <Link href={`/key-groups/${firstPendingGroup.id}`}>
+                  <Button variant="outline">Revisar chave pendente</Button>
+                </Link>
+              ) : (
+                <Button variant="outline" disabled>
+                  Revisar chaves pendentes
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </>
       ) : null}
 
       {activeCompetitionId && keyGroupsQuery.isLoading ? (
@@ -244,9 +386,13 @@ export default function KeyGroupsPage() {
       {activeCompetitionId &&
       !keyGroupsQuery.isLoading &&
       !keyGroupsQuery.isError &&
-      displayGroups.length === 0 ? (
+      groupsByStatus.length === 0 ? (
         <StateCard
-          message="Nenhuma chave cadastrada para esta competição."
+          message={
+            displayGroups.length === 0
+              ? 'Nenhuma chave cadastrada para esta competição.'
+              : 'Nenhuma chave corresponde aos filtros operacionais atuais.'
+          }
           tone="empty"
         />
       ) : null}
@@ -254,7 +400,7 @@ export default function KeyGroupsPage() {
       {activeCompetitionId &&
       !keyGroupsQuery.isLoading &&
       !keyGroupsQuery.isError &&
-      displayGroups.length > 0 ? (
+      groupsByStatus.length > 0 ? (
         <Card className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
           <div className="overflow-x-auto">
             <Table className="rounded-none border-0">
@@ -268,7 +414,7 @@ export default function KeyGroupsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayGroups.map((group) => (
+                {groupsByStatus.map((group) => (
                   <TableRow key={group.id} className="cursor-pointer hover:bg-amber-50">
                     <TableCell className="font-semibold">
                       <Link href={`/key-groups/${group.id}`} className="flex items-center gap-3">
@@ -363,6 +509,42 @@ export default function KeyGroupsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function isGroupIncomplete(group: GroupLike) {
+  return group.athletes.length < 2;
+}
+
+function hasGroupWithoutFights(group: GroupLike) {
+  return group.athletes.length >= 2 && group.fights.length === 0;
+}
+
+type GroupLike = Pick<KeyGroup, 'id' | 'athletes' | 'fights' | 'locked'>;
+
+function KeyGroupMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'warning' | 'success';
+}) {
+  const className =
+    tone === 'warning'
+      ? 'border-amber-300 bg-amber-50 text-amber-950'
+      : tone === 'success'
+        ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+        : 'border-slate-300 bg-slate-50 text-slate-950';
+
+  return (
+    <div className={`rounded-2xl border-2 p-4 ${className}`}>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
     </div>
   );
 }
