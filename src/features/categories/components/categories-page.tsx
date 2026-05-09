@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Filter, LoaderCircle, Search } from 'lucide-react';
+import { Filter, LoaderCircle, Search, Swords } from 'lucide-react';
 import { getWeighInStatusLabel } from '@/features/athletes/types/athlete';
 import { useBelts } from '@/features/belts/hooks/use-belts';
 import {
@@ -14,7 +14,17 @@ import {
   CategorySummary,
   CreateCategoryPayload,
 } from '@/features/categories/types/category';
+import { useGenerateFights } from '@/features/fights/hooks/use-fights';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
+import AlertDialog, {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alertDialog';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Checkbox } from '@/shared/ui/checkbox';
@@ -51,6 +61,7 @@ export default function CategoriesPage() {
   const [search, setSearch] = useState('');
   const [beltFilter, setBeltFilter] = useState('ALL');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [isGenerateFightsDialogOpen, setIsGenerateFightsDialogOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateCategoryPayload>(initialFormState);
 
   const activeCompetitionId = useCompetitionStore(
@@ -63,6 +74,7 @@ export default function CategoriesPage() {
   const beltsQuery = useBelts();
   const generateMutation = useGenerateCategories(activeCompetitionId);
   const createMutation = useCreateCategory(activeCompetitionId);
+  const generateFightsMutation = useGenerateFights(activeCompetitionId);
   const categoryDetailQuery = useCategory(selectedCategoryId);
 
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
@@ -188,6 +200,38 @@ export default function CategoriesPage() {
     }
   }
 
+  async function handleGenerateFights() {
+    if (!activeCompetitionId) {
+      return;
+    }
+
+    if (categories.length === 0) {
+      toast({
+        title: 'Sem categorias para gerar lutas',
+        description: 'Gere ou cadastre ao menos uma categoria antes de criar as lutas.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    try {
+      await generateFightsMutation.mutateAsync();
+      setIsGenerateFightsDialogOpen(false);
+      toast({
+        title: 'Lutas geradas',
+        description: 'Os confrontos da competição ativa foram atualizados.',
+        variant: 'success',
+      });
+    } catch (error) {
+      toast({
+        title: 'Falha ao gerar lutas',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <header className="rounded-[28px] border-4 border-slate-900 bg-white p-6 shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
@@ -204,13 +248,31 @@ export default function CategoriesPage() {
             </p>
           </div>
 
-          <Button
-            onClick={() => void handleGenerateCategories()}
-            disabled={!activeCompetitionId || !hasHydrated || generateMutation.isPending}
-            className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800"
-          >
-            {generateMutation.isPending ? 'Gerando...' : 'Gerar categorias'}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsGenerateFightsDialogOpen(true)}
+              disabled={
+                !activeCompetitionId ||
+                !hasHydrated ||
+                categoriesQuery.isLoading ||
+                categories.length === 0 ||
+                generateFightsMutation.isPending
+              }
+              className="h-14 rounded-2xl border-4 border-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] text-slate-900 hover:bg-amber-100"
+            >
+              <Swords className="mr-2 h-5 w-5" />
+              {generateFightsMutation.isPending ? 'Gerando lutas...' : 'Gerar lutas'}
+            </Button>
+            <Button
+              onClick={() => void handleGenerateCategories()}
+              disabled={!activeCompetitionId || !hasHydrated || generateMutation.isPending}
+              className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800"
+            >
+              {generateMutation.isPending ? 'Gerando...' : 'Gerar categorias'}
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -506,6 +568,34 @@ export default function CategoriesPage() {
             onClose={() => setSelectedCategoryId(null)}
             detail={categoryDetailQuery.data ?? null}
           />
+
+          <AlertDialog
+            open={isGenerateFightsDialogOpen}
+            onOpenChange={setIsGenerateFightsDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Gerar lutas da competição?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta ação usa as categorias atuais da competição ativa para
+                  criar ou regenerar os confrontos. Se já existirem lutas
+                  montadas, elas podem ser substituídas.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={generateFightsMutation.isPending}>
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => void handleGenerateFights()}
+                  closeOnClick={false}
+                  disabled={generateFightsMutation.isPending}
+                >
+                  {generateFightsMutation.isPending ? 'Gerando...' : 'Confirmar geração'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>
