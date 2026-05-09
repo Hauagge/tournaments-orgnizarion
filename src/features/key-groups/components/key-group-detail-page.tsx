@@ -10,6 +10,7 @@ import {
   Athlete,
   getWeighInStatusLabel,
 } from '@/features/athletes/types/athlete';
+import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
 import { KeyGroupBuilder } from '@/features/key-groups/components/key-group-builder';
 import {
   useGenerateKeyGroupFights,
@@ -124,6 +125,10 @@ export default function KeyGroupDetailPage({
     nameDraft,
     persistedAthletes,
   ]);
+  const athleteReadiness = useMemo(
+    () => buildAthleteReadinessSummary(athletesDraft),
+    [athletesDraft],
+  );
 
   async function handleSaveKeyGroup() {
     if (!keyGroup) {
@@ -200,6 +205,26 @@ export default function KeyGroupDetailPage({
   }
 
   async function handleGenerateFights() {
+    if (athleteReadiness.approvedAthletes < 2) {
+      toast({
+        title: 'Chave sem atletas aptos',
+        description:
+          'A chave precisa de pelo menos 2 atletas com pesagem aprovada para gerar lutas.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    if (athleteReadiness.pendingWeighIn > 0) {
+      toast({
+        title: 'Finalize a pesagem da chave',
+        description:
+          `${athleteReadiness.pendingWeighIn} atleta(s) desta chave ainda estão com pesagem pendente.`,
+        variant: 'warning',
+      });
+      return;
+    }
+
     if (athletesDraft.length < 2) {
       toast({
         title: 'Chave incompleta',
@@ -343,7 +368,9 @@ export default function KeyGroupDetailPage({
                   disabled={
                     isLocked ||
                     generateMutation.isPending ||
-                    athletesDraft.length < 2
+                    athletesDraft.length < 2 ||
+                    athleteReadiness.pendingWeighIn > 0 ||
+                    athleteReadiness.approvedAthletes < 2
                   }
                 >
                   <Swords className="mr-2 h-4 w-4" />
@@ -367,6 +394,52 @@ export default function KeyGroupDetailPage({
               </div>
             </div>
           </header>
+
+          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+            <CardContent className="space-y-4 p-5">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black tracking-tight text-slate-950">
+                  Prontidão da chave para gerar lutas
+                </h2>
+                <p className="text-sm text-slate-600">
+                  Gere os confrontos apenas quando os atletas desta chave já estiverem aptos para competir.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <ReadinessMetric
+                  label="Atletas na chave"
+                  value={String(athleteReadiness.totalAthletes)}
+                />
+                <ReadinessMetric
+                  label="Pesagem aprovada"
+                  value={String(athleteReadiness.approvedAthletes)}
+                  tone="success"
+                />
+                <ReadinessMetric
+                  label="Pesagem pendente"
+                  value={String(athleteReadiness.pendingWeighIn)}
+                  tone={athleteReadiness.pendingWeighIn > 0 ? 'warning' : 'default'}
+                />
+                <ReadinessMetric
+                  label="Pesagem reprovada"
+                  value={String(athleteReadiness.rejectedWeighIn)}
+                  tone={athleteReadiness.rejectedWeighIn > 0 ? 'warning' : 'default'}
+                />
+              </div>
+
+              {athleteReadiness.approvedAthletes >= 2 &&
+              athleteReadiness.pendingWeighIn === 0 ? (
+                <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  A chave está pronta para gerar lutas: há atletas suficientes e nenhuma pesagem pendente.
+                </div>
+              ) : (
+                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  Finalize a preparação da chave antes de gerar lutas. O sistema só libera esta etapa quando houver pelo menos 2 atletas aprovados e nenhuma pesagem pendente.
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card className="border-4 border-slate-900 p-0">
             <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_280px_auto] lg:items-end">
@@ -574,6 +647,32 @@ function StateCard({
     <Card className={`border-4 p-0 ${toneClassName}`}>
       <CardContent className="p-6">{message}</CardContent>
     </Card>
+  );
+}
+
+function ReadinessMetric({
+  label,
+  value,
+  tone = 'default',
+}: {
+  label: string;
+  value: string;
+  tone?: 'default' | 'success' | 'warning';
+}) {
+  const className =
+    tone === 'success'
+      ? 'border-emerald-300 bg-emerald-50 text-emerald-950'
+      : tone === 'warning'
+        ? 'border-amber-300 bg-amber-50 text-amber-950'
+        : 'border-slate-300 bg-slate-50 text-slate-950';
+
+  return (
+    <div className={`rounded-2xl border-2 p-4 ${className}`}>
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-2 text-3xl font-black">{value}</p>
+    </div>
   );
 }
 
