@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Activity, Megaphone, Radio, Rows3 } from 'lucide-react';
 import {
@@ -30,6 +30,7 @@ import { useToast } from '@/shared/ui/use-toast';
 const POLLING_INTERVAL = 4000;
 
 export default function AreaQueuePage({ areaId }: { areaId: string }) {
+  const [lastCalledFightLabel, setLastCalledFightLabel] = useState<string | null>(null);
   const activeCompetitionId = useCompetitionStore(
     (state) => state.activeCompetitionId,
   );
@@ -104,6 +105,7 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
 
     try {
       await callNextMutation.mutateAsync();
+      setLastCalledFightLabel(getFightLabel(nextFight));
       toast({
         title: 'Proxima luta chamada',
         description: `${getFightLabel(nextFight)} foi enviada para chamada.`,
@@ -124,9 +126,20 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
       <header className="rounded-[28px] border-4 border-slate-900 bg-white p-6 shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
+            <div className="flex flex-wrap items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+              <Link href="/areas/distribution" className="hover:text-slate-950">
+                Distribuição
+              </Link>
+              <span>/</span>
+              <Link href="/areas" className="hover:text-slate-950">
+                Área
+              </Link>
+              <span>/</span>
+              <span className="text-slate-950">Chamada</span>
+            </div>
             <Link
               href="/areas"
-              className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-500 hover:text-slate-950"
+              className="mt-3 inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.14em] text-slate-500 hover:text-slate-950"
             >
               <ArrowLeft className="h-4 w-4" />
               Voltar para areas
@@ -238,6 +251,12 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                     label="Fila"
                     value={`${queuePreview.length} luta(s)`}
                   />
+                  <StatusPill
+                    icon={<Radio className="h-4 w-4" />}
+                    label="Estado"
+                    value={nextFight ? 'Pronta para chamada' : 'Fila vazia'}
+                    tone={nextFight ? 'success' : 'warning'}
+                  />
                 </div>
 
                 <Button
@@ -261,6 +280,13 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                     Aciona a chamada da próxima luta quando a fila estiver carregada.
                   </p>
                 </div>
+
+                {lastCalledFightLabel ? (
+                  <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
+                    <p className="font-semibold">Última luta chamada</p>
+                    <p className="mt-1">{lastCalledFightLabel}</p>
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
           </section>
