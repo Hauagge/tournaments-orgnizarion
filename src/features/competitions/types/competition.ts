@@ -1,11 +1,10 @@
 export const competitionModes = ['KEYS', 'ABSOLUTE_GP'] as const;
 
-export type CompetitionMode = 'KEYS' | 'ABSOLUTE_GP' | 'TEAM';
+export type CompetitionMode = (typeof competitionModes)[number];
 
 export const competitionModeLabels: Record<CompetitionMode, string> = {
   KEYS: 'Chaves',
   ABSOLUTE_GP: 'GP absoluto',
-  TEAM: 'Legado por equipes',
 };
 
 export type Competition = {

@@ -3,31 +3,41 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CalendarClock, GitBranch, Scale, TimerReset } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarClock,
+  GitBranch,
+  Scale,
+  TimerReset,
+} from 'lucide-react';
 import {
   Competition,
   competitionModeLabels,
 } from '@/features/competitions/types/competition';
+import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 
 type CompetitionCardProps = {
   competition: Competition;
   isActive: boolean;
+  isSelected: boolean;
   onSetActive: (competitionId: string) => void;
+  onSelect: (competitionId: string) => void;
 };
 
 export function CompetitionCard({
   competition,
   isActive,
+  isSelected,
   onSetActive,
+  onSelect,
 }: CompetitionCardProps) {
   const router = useRouter();
-  const destinationHref = '/key-groups';
+  const entry = getCompetitionEntry(competition.mode);
 
   const handleOpenCompetition = () => {
-    onSetActive(competition.id);
-    router.push(destinationHref);
+    onSelect(competition.id);
   };
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -50,7 +60,7 @@ export function CompetitionCard({
       tabIndex={0}
       onClick={handleOpenCompetition}
       onKeyDown={handleCardKeyDown}
-      className={`cursor-pointer border-slate-200 p-0 transition hover:-translate-y-0.5 hover:shadow-md ${isActive ? 'ring-2 ring-blue-500' : ''}`}
+      className={`cursor-pointer border-slate-200 p-0 transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? 'ring-2 ring-blue-500' : isActive ? 'ring-2 ring-slate-300' : ''}`}
     >
       <CardContent className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
@@ -62,11 +72,18 @@ export function CompetitionCard({
               {competition.name}
             </h2>
           </div>
-          {isActive && (
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-              Ativa
-            </span>
-          )}
+          <div className="flex flex-col items-end gap-2">
+            {isSelected && (
+              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+                Selecionada
+              </span>
+            )}
+            {isActive && (
+              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
+                Ativa
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
@@ -94,6 +111,15 @@ export function CompetitionCard({
 
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button
+            variant={isSelected ? 'secondary' : 'outline'}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(competition.id);
+            }}
+          >
+            {isSelected ? 'Gerindo usuários' : 'Gerir usuários'}
+          </Button>
+          <Button
             variant={isActive ? 'secondary' : 'outline'}
             onClick={(event) => {
               event.stopPropagation();
@@ -102,9 +128,20 @@ export function CompetitionCard({
           >
             {isActive ? 'Competição ativa' : 'Definir como ativa'}
           </Button>
+          <Button
+            className="sm:flex-1"
+            onClick={(event) => {
+              event.stopPropagation();
+              onSetActive(competition.id);
+              router.push(entry.href);
+            }}
+          >
+            {entry.label}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
           <Link
             href={`/competitions/${competition.id}`}
-            className="sm:flex-1"
+            className="sm:flex-1 lg:max-w-[220px]"
             onClick={(event) => event.stopPropagation()}
           >
             <Button className="w-full" variant="default">

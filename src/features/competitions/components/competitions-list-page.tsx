@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { CompetitionCard } from '@/features/competitions/components/competition-card';
+import { CompetitionUsersPanel } from '@/features/competitions/components/competition-users-panel';
 import { useCompetitions } from '@/features/competitions/hooks/use-competitions';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
@@ -16,6 +18,31 @@ export default function CompetitionsListPage() {
   );
   const setActiveCompetitionId = useCompetitionStore(
     (state) => state.setActiveCompetitionId,
+  );
+  const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (selectedCompetitionId) {
+      return;
+    }
+
+    if (activeCompetitionId) {
+      setSelectedCompetitionId(activeCompetitionId);
+      return;
+    }
+
+    if (competitions.length > 0) {
+      setSelectedCompetitionId(competitions[0].id);
+    }
+  }, [activeCompetitionId, competitions, selectedCompetitionId]);
+
+  const selectedCompetition = useMemo(
+    () =>
+      competitions.find((competition) => competition.id === selectedCompetitionId) ??
+      null,
+    [competitions, selectedCompetitionId],
   );
 
   return (
@@ -81,10 +108,16 @@ export default function CompetitionsListPage() {
             key={competition.id}
             competition={competition}
             isActive={competition.id === activeCompetitionId}
+            isSelected={competition.id === selectedCompetitionId}
             onSetActive={setActiveCompetitionId}
+            onSelect={setSelectedCompetitionId}
           />
         ))}
       </section>
+
+      {selectedCompetition && (
+        <CompetitionUsersPanel competition={selectedCompetition} />
+      )}
     </div>
   );
 }
