@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { ArrowLeftRight } from 'lucide-react';
 import { useAreas, useDistributeAreaFights } from '@/features/areas/hooks/use-areas';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
