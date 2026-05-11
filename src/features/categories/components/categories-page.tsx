@@ -65,7 +65,6 @@ export default function CategoriesPage() {
   const [beltFilter, setBeltFilter] = useState('ALL');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [isGenerateFightsDialogOpen, setIsGenerateFightsDialogOpen] = useState(false);
-  const [hasJustGeneratedFights, setHasJustGeneratedFights] = useState(false);
   const [createForm, setCreateForm] = useState<CreateCategoryPayload>(initialFormState);
 
   const activeCompetitionId = useCompetitionStore(
@@ -108,8 +107,36 @@ export default function CategoriesPage() {
     () => categories.filter((category) => category.totalAthletes > 0).length,
     [categories],
   );
-  const generatedFightsCount = fights.length;
-  const hasGeneratedFights = generatedFightsCount > 0;
+  const hasResolvedFightsState = !fightsQuery.isLoading && !fightsQuery.isError;
+  const generatedFightsCount = hasResolvedFightsState ? fights.length : null;
+  const hasGeneratedFights = hasResolvedFightsState && fights.length > 0;
+  const unassignedFightsCount = useMemo(
+    () => fights.filter((fight) => !fight.areaId).length,
+    [fights],
+  );
+  const categoryNextStep = useMemo(() => {
+    if (!hasResolvedFightsState || !hasGeneratedFights) {
+      return null;
+    }
+
+    if (unassignedFightsCount > 0) {
+      return {
+        href: '/areas/distribution',
+        label: 'Ir para distribuição',
+        title: 'Lutas prontas para distribuição',
+        description:
+          'As lutas já existem, mas ainda precisam entrar nas áreas antes da operação.',
+      };
+    }
+
+    return {
+      href: '/areas',
+      label: 'Abrir operação das áreas',
+      title: 'Competição pronta para operação',
+      description:
+        'As lutas já foram geradas e distribuídas. O próximo passo útil é operar as chamadas nas áreas.',
+    };
+  }, [hasGeneratedFights, hasResolvedFightsState, unassignedFightsCount]);
 
   function updateCreateForm<K extends keyof CreateCategoryPayload>(
     key: K,
@@ -255,7 +282,6 @@ export default function CategoriesPage() {
     try {
       await generateFightsMutation.mutateAsync();
       setIsGenerateFightsDialogOpen(false);
-      setHasJustGeneratedFights(true);
       toast({
         title: 'Lutas geradas',
         description: 'Os confrontos da competição ativa foram atualizados.',
@@ -277,13 +303,13 @@ export default function CategoriesPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500">
-              Categories
+              Categorias
             </p>
             <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
-              Gere e revise as categorias da competicao ativa
+              Gere e revise as categorias da competição ativa
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              Acione a geracao, filtre a listagem e abra o detalhe para revisar os atletas de cada categoria.
+              Acione a geração, filtre a listagem e abra o detalhe para revisar os atletas de cada categoria.
             </p>
           </div>
 
@@ -318,12 +344,12 @@ export default function CategoriesPage() {
       </header>
 
       {!hasHydrated && (
-        <StateCard message="Carregando competicao ativa..." />
+        <StateCard message="Carregando competição ativa..." />
       )}
 
       {hasHydrated && !activeCompetitionId && (
         <StateCard
-          message="Selecione uma competicao no topo para listar as categorias."
+          message="Selecione uma competição no topo para listar as categorias."
           tone="warning"
         />
       )}
@@ -353,24 +379,56 @@ export default function CategoriesPage() {
                 />
                 <ReadinessMetric
                   label="Lutas geradas"
-                  value={String(generatedFightsCount)}
-                  tone={hasGeneratedFights ? 'success' : 'default'}
+                  value={
+                    fightsQuery.isLoading
+                      ? '...'
+                      : fightsQuery.isError
+                        ? 'Erro'
+                        : String(generatedFightsCount ?? 0)
+                  }
+                  tone={
+                    fightsQuery.isError
+                      ? 'warning'
+                      : hasGeneratedFights
+                        ? 'success'
+                        : 'default'
+                  }
                 />
                 <ReadinessMetric
                   label="Etapa atual"
-                  value={hasGeneratedFights ? 'Distribuir' : 'Categorias'}
-                  tone={hasGeneratedFights ? 'success' : 'warning'}
+                  value={
+                    fightsQuery.isLoading
+                      ? 'Carregando'
+                      : fightsQuery.isError
+                        ? 'Indisponível'
+                        : hasGeneratedFights
+                          ? 'Distribuir'
+                          : 'Categorias'
+                  }
+                  tone={
+                    fightsQuery.isLoading || fightsQuery.isError
+                      ? 'warning'
+                      : hasGeneratedFights
+                        ? 'success'
+                        : 'warning'
+                  }
                 />
               </div>
 
               <div
                 className={`rounded-2xl border-2 p-4 text-sm ${
-                  hasGeneratedFights
+                  fightsQuery.isLoading || fightsQuery.isError
+                    ? 'border-slate-300 bg-slate-50 text-slate-700'
+                    : hasGeneratedFights
                     ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
                     : 'border-amber-300 bg-amber-50 text-amber-950'
                 }`}
               >
-                {hasGeneratedFights
+                {fightsQuery.isLoading
+                  ? 'O estado das lutas ainda está carregando. Aguarde antes de decidir a próxima etapa operacional.'
+                  : fightsQuery.isError
+                    ? 'Não foi possível confirmar o estado atual das lutas. Resolva esse erro antes de avançar no fluxo.'
+                  : hasGeneratedFights
                   ? 'As lutas desta competição já existem. O próximo passo operacional é distribuir as áreas.'
                   : 'Você ainda está na etapa de preparação. Revise ou gere as categorias antes de avançar para as lutas.'}
               </div>
@@ -447,19 +505,37 @@ export default function CategoriesPage() {
             </CardContent>
           </Card>
 
-          {hasJustGeneratedFights ? (
-            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)]">
+          {categoryNextStep ? (
+            <Card
+              className={`p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)] ${
+                categoryNextStep.href === '/areas/distribution'
+                  ? 'border-4 border-emerald-300 bg-emerald-50'
+                  : 'border-4 border-sky-300 bg-sky-50'
+              }`}
+            >
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-emerald-950">
-                    Lutas prontas para a próxima etapa
+                  <h2
+                    className={`text-lg font-black tracking-tight ${
+                      categoryNextStep.href === '/areas/distribution'
+                        ? 'text-emerald-950'
+                        : 'text-sky-950'
+                    }`}
+                  >
+                    {categoryNextStep.title}
                   </h2>
-                  <p className="text-sm text-emerald-900">
-                    A geração foi concluída. Agora siga para a distribuição das áreas para preparar a operação.
+                  <p
+                    className={`text-sm ${
+                      categoryNextStep.href === '/areas/distribution'
+                        ? 'text-emerald-900'
+                        : 'text-sky-900'
+                    }`}
+                  >
+                    {categoryNextStep.description}
                   </p>
                 </div>
-                <Link href="/areas/distribution">
-                  <Button className="w-full lg:w-auto">Ir para distribuição</Button>
+                <Link href={categoryNextStep.href}>
+                  <Button className="w-full lg:w-auto">{categoryNextStep.label}</Button>
                 </Link>
               </CardContent>
             </Card>
