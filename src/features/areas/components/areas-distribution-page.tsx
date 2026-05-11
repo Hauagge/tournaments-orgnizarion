@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
 import { ArrowLeftRight } from 'lucide-react';
+import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
+import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { useAreas, useDistributeAreaFights } from '@/features/areas/hooks/use-areas';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
@@ -13,10 +14,10 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { useToast } from '@/shared/ui/use-toast';
 
 export default function AreasDistributionPage() {
-  const [hasJustDistributed, setHasJustDistributed] = useState(false);
   const activeCompetitionId = useCompetitionStore((state) => state.activeCompetitionId);
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
   const competitionQuery = useCompetition(activeCompetitionId ?? '');
+  const athletesQuery = useAthletes(activeCompetitionId, '');
   const areasQuery = useAreas(activeCompetitionId);
   const fightsQuery = useFights(activeCompetitionId);
   const distributeMutation = useDistributeAreaFights(activeCompetitionId);
@@ -26,11 +27,18 @@ export default function AreasDistributionPage() {
   const fights = fightsQuery.data ?? [];
   const distributedFights = fights.filter((fight) => Boolean(fight.areaId));
   const pendingDistributionFights = fights.filter((fight) => !fight.areaId);
-  const flowEntry = getCompetitionEntry(competitionQuery.data?.mode ?? 'KEYS');
+  const readiness = athletesQuery.data
+    ? buildAthleteReadinessSummary(athletesQuery.data)
+    : null;
+  const flowEntry = competitionQuery.data
+    ? getCompetitionEntry(competitionQuery.data.mode, readiness)
+    : null;
   const canDistribute =
     fights.length > 0 &&
     areas.length > 0 &&
     pendingDistributionFights.length > 0;
+  const canOpenAreaOperation =
+    distributedFights.length > 0 && pendingDistributionFights.length === 0;
 
   async function handleDistribute() {
     if (!activeCompetitionId || !canDistribute) {
@@ -39,14 +47,12 @@ export default function AreasDistributionPage() {
 
     try {
       await distributeMutation.mutateAsync();
-      setHasJustDistributed(true);
       toast({
-        title: 'Lutas distribuidas',
-        description: 'As filas das areas foram atualizadas.',
+        title: 'Lutas distribuídas',
+        description: 'As filas das áreas foram atualizadas.',
         variant: 'success',
       });
     } catch (error) {
-      setHasJustDistributed(false);
       toast({
         title: 'Falha ao distribuir lutas',
         description: error instanceof Error ? error.message : 'Tente novamente.',
@@ -61,13 +67,13 @@ export default function AreasDistributionPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500">
-              Areas / Distribution
+              Áreas / Distribuição
             </p>
             <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
-              Distribua as lutas entre as areas
+              Distribua as lutas entre as áreas
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              Acione a distribuicao para montar as filas e abra cada area para operar a chamada.
+              Acione a distribuição para montar as filas e abra cada área para operar a chamada.
             </p>
           </div>
 
@@ -93,11 +99,11 @@ export default function AreasDistributionPage() {
         </div>
       </header>
 
-      {!hasHydrated && <StateCard message="Carregando competicao ativa..." />}
+      {!hasHydrated && <StateCard message="Carregando competição ativa..." />}
 
       {hasHydrated && !activeCompetitionId && (
         <StateCard
-          message="Selecione uma competicao no topo para distribuir as lutas."
+          message="Selecione uma competição no topo para distribuir as lutas."
           tone="warning"
         />
       )}
@@ -159,12 +165,17 @@ export default function AreasDistributionPage() {
                     Revise primeiro o ponto do fluxo que ainda está bloqueando a montagem das filas.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-3">
-                    {fights.length === 0 ? (
+                    {fights.length === 0 && flowEntry ? (
                       <Link href={flowEntry.href}>
                         <Button type="button">
                           {flowEntry.label}
                         </Button>
                       </Link>
+                    ) : null}
+                    {fights.length === 0 && !flowEntry ? (
+                      <Button type="button" disabled variant="outline">
+                        Aguarde a competição carregar
+                      </Button>
                     ) : null}
                     {areas.length === 0 ? (
                       <Link href="/areas">
@@ -178,13 +189,13 @@ export default function AreasDistributionPage() {
               )
             ) : null}
 
-            {hasJustDistributed ? (
+            {canOpenAreaOperation ? (
               <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
                 <p className="font-semibold">
-                  Distribuição concluída.
+                  Distribuição pronta para operação.
                 </p>
                 <p className="mt-1">
-                  O próximo passo recomendado é abrir a operação das áreas para iniciar as chamadas.
+                  Todas as lutas já estão distribuídas. O próximo passo recomendado é abrir a operação das áreas para iniciar as chamadas.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-3">
                   <Link href="/areas">
@@ -196,15 +207,15 @@ export default function AreasDistributionPage() {
               </div>
             ) : null}
 
-            {areasQuery.isLoading && <InlineState message="Carregando areas..." />}
+            {areasQuery.isLoading && <InlineState message="Carregando áreas..." />}
             {areasQuery.isError && (
               <InlineState
-                message={areasQuery.error instanceof Error ? areasQuery.error.message : 'Falha ao carregar areas.'}
+                message={areasQuery.error instanceof Error ? areasQuery.error.message : 'Falha ao carregar áreas.'}
                 tone="error"
               />
             )}
             {!areasQuery.isLoading && !areasQuery.isError && areas.length === 0 && (
-              <InlineState message="Cadastre areas antes de distribuir as lutas." tone="empty" />
+              <InlineState message="Cadastre áreas antes de distribuir as lutas." tone="empty" />
             )}
 
             {!areasQuery.isLoading && !areasQuery.isError && areas.length > 0 && (
@@ -216,7 +227,7 @@ export default function AreasDistributionPage() {
                       <p className="mt-2 text-sm text-slate-600">Fila atual: {area.queueCount} luta(s)</p>
                       <div className="mt-3 space-y-1 text-sm text-slate-500">
                         {getAreaPreviewFights(area).length === 0 ? (
-                          <p>Nenhuma luta distribuida</p>
+                          <p>Nenhuma luta distribuída</p>
                         ) : (
                           getAreaPreviewFights(area).map((fight, index) => (
                             <p key={`${fight.id}-${index}`}>
