@@ -42,7 +42,24 @@ export default function WeighInTab() {
   const confirmMutation = useConfirmWeighIn(activeCompetitionId);
   const resetMutation = useResetWeighIn(activeCompetitionId);
 
-  const athletes = useMemo(() => athletesQuery.data ?? [], [athletesQuery.data]);
+  const athletes = useMemo(() => {
+    const rows = [...(athletesQuery.data ?? [])];
+
+    rows.sort((athleteA, athleteB) => {
+      const athleteAConfirmed =
+        athleteA.weighInStatus !== 'PENDING' || athleteA.realWeightGrams !== null;
+      const athleteBConfirmed =
+        athleteB.weighInStatus !== 'PENDING' || athleteB.realWeightGrams !== null;
+
+      if (athleteAConfirmed !== athleteBConfirmed) {
+        return athleteAConfirmed ? 1 : -1;
+      }
+
+      return athleteA.name.localeCompare(athleteB.name, 'pt-BR');
+    });
+
+    return rows;
+  }, [athletesQuery.data]);
   const quickResults = useMemo(
     () => athletes.slice(0, SEARCH_RESULTS_LIMIT),
     [athletes],

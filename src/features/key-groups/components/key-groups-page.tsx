@@ -59,47 +59,46 @@ export default function KeyGroupsPage() {
   const keyGroups = keyGroupsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
   const maxGroupSize = competitionQuery.data?.maxGroupSize ?? 4;
-  const filteredKeyGroups = useMemo(
-    () =>
-      keyGroups.filter(
-        (group) =>
-          categoryFilter === 'ALL' || group.categoryId === categoryFilter,
-      ),
-    [categoryFilter, keyGroups],
-  );
-
   const detailQueries = useQueries({
-    queries: filteredKeyGroups.map((group) => ({
+    queries: keyGroups.map((group) => ({
       queryKey: ['key-group-list-detail', group.id],
       queryFn: () => getKeyGroup(group.id),
       enabled: Boolean(activeCompetitionId),
     })),
   });
-
-  const displayGroups = useMemo(
+  const allDisplayGroups = useMemo(
     () =>
-      filteredKeyGroups.map((group, index) => {
+      keyGroups.map((group, index) => {
         const detail = detailQueries[index]?.data;
         return detail ?? group;
       }),
-    [detailQueries, filteredKeyGroups],
+    [detailQueries, keyGroups],
   );
+  const filteredKeyGroups = useMemo(
+    () =>
+      allDisplayGroups.filter(
+        (group) =>
+          categoryFilter === 'ALL' || group.categoryId === categoryFilter,
+      ),
+    [allDisplayGroups, categoryFilter],
+  );
+  const displayGroups = filteredKeyGroups;
   const readinessMetrics = useMemo(() => {
-    const incompleteCount = displayGroups.filter((group) =>
+    const incompleteCount = allDisplayGroups.filter((group) =>
       isGroupIncomplete(group),
     ).length;
-    const withoutFightsCount = displayGroups.filter((group) =>
+    const withoutFightsCount = allDisplayGroups.filter((group) =>
       hasGroupWithoutFights(group),
     ).length;
-    const lockedCount = displayGroups.filter((group) => group.locked).length;
+    const lockedCount = allDisplayGroups.filter((group) => group.locked).length;
 
     return {
-      totalCount: displayGroups.length,
+      totalCount: allDisplayGroups.length,
       incompleteCount,
       withoutFightsCount,
       lockedCount,
     };
-  }, [displayGroups]);
+  }, [allDisplayGroups]);
   const groupsByStatus = useMemo(
     () =>
       displayGroups.filter((group) => {
@@ -118,10 +117,10 @@ export default function KeyGroupsPage() {
   );
   const firstPendingGroup = useMemo(
     () =>
-      displayGroups.find(
+      allDisplayGroups.find(
         (group) => isGroupIncomplete(group) || hasGroupWithoutFights(group),
       ) ?? null,
-    [displayGroups],
+    [allDisplayGroups],
   );
   const canAdvanceToDistribution =
     readinessMetrics.totalCount > 0 &&
