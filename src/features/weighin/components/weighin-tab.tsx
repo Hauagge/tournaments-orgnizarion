@@ -292,9 +292,22 @@ export default function WeighInTab() {
                               ID {athlete.id} • {athlete.academy || 'Sem academia'}
                             </p>
                           </div>
-                          <span className={statusBadgeClassName(athlete.weighInStatus)}>
-                            {getWeighInStatusLabel(athlete.weighInStatus)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-3 w-3 shrink-0 rounded-full md:hidden ${getWeighInStatusDotClassName(
+                                athlete.weighInStatus,
+                              )}`}
+                              aria-hidden="true"
+                              title={getWeighInStatusLabel(athlete.weighInStatus)}
+                            />
+                            <span
+                              className={`hidden md:inline-flex ${statusBadgeClassName(
+                                athlete.weighInStatus,
+                              ).replace('inline-flex ', '')}`}
+                            >
+                              {getWeighInStatusLabel(athlete.weighInStatus)}
+                            </span>
+                          </div>
                         </button>
                       );
                     })}
@@ -318,9 +331,22 @@ export default function WeighInTab() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {selectedAthlete && (
-                      <span className={statusBadgeClassName(selectedAthlete.weighInStatus)}>
-                        {getWeighInStatusLabel(selectedAthlete.weighInStatus)}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-3 w-3 shrink-0 rounded-full md:hidden ${getWeighInStatusDotClassName(
+                            selectedAthlete.weighInStatus,
+                          )}`}
+                          aria-hidden="true"
+                          title={getWeighInStatusLabel(selectedAthlete.weighInStatus)}
+                        />
+                        <span
+                          className={`hidden md:inline-flex ${statusBadgeClassName(
+                            selectedAthlete.weighInStatus,
+                          ).replace('inline-flex ', '')}`}
+                        >
+                          {getWeighInStatusLabel(selectedAthlete.weighInStatus)}
+                        </span>
+                      </div>
                     )}
                     {feedback && (
                       <span className={feedbackBadgeClassName(feedback.tone)}>
@@ -432,6 +458,18 @@ function statusBadgeClassName(status: string) {
   }
 
   return 'inline-flex rounded-full border-2 border-amber-900 bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-amber-900';
+}
+
+function getWeighInStatusDotClassName(status: string) {
+  if (status === 'APPROVED') {
+    return 'bg-emerald-500';
+  }
+
+  if (status === 'REJECTED') {
+    return 'bg-red-500';
+  }
+
+  return 'bg-amber-500';
 }
 
 function feedbackBadgeClassName(tone: 'success' | 'error') {
