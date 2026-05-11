@@ -14,6 +14,8 @@ import {
   Competition,
   competitionModeLabels,
 } from '@/features/competitions/types/competition';
+import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
+import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -34,7 +36,11 @@ export function CompetitionCard({
   onSelect,
 }: CompetitionCardProps) {
   const router = useRouter();
-  const entry = getCompetitionEntry(competition.mode);
+  const athletesQuery = useAthletes(competition.id, '');
+  const readiness = athletesQuery.data
+    ? buildAthleteReadinessSummary(athletesQuery.data)
+    : null;
+  const entry = getCompetitionEntry(competition.mode, readiness);
 
   const handleOpenCompetition = () => {
     onSelect(competition.id);
@@ -130,13 +136,16 @@ export function CompetitionCard({
           </Button>
           <Button
             className="sm:flex-1"
+            disabled={athletesQuery.isLoading && !athletesQuery.data}
             onClick={(event) => {
               event.stopPropagation();
               onSetActive(competition.id);
               router.push(entry.href);
             }}
           >
-            {entry.label}
+            {athletesQuery.isLoading && !athletesQuery.data
+              ? 'Carregando fluxo...'
+              : entry.label}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           <Link
