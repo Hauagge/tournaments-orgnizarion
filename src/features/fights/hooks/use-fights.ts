@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import { areaQueueQueryKey, areasQueryKey } from '@/features/areas/hooks/use-areas';
 import {
   finishFight,
   generateFights,
@@ -40,6 +41,12 @@ export function useGenerateFights(competitionId: string | null) {
       queryClient.invalidateQueries({
         queryKey: [...fightsQueryKey, competitionId],
       });
+      queryClient.invalidateQueries({
+        queryKey: [...areasQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: areaQueueQueryKey,
+      });
     },
   });
 }
@@ -52,6 +59,12 @@ export function useStartFight(competitionId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...fightsQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...areasQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: areaQueueQueryKey,
       });
     },
   });

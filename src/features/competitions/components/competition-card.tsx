@@ -16,6 +16,8 @@ import {
 } from '@/features/competitions/types/competition';
 import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
 import { useAthletes } from '@/features/athletes/hooks/use-athletes';
+import { RoleGuard } from '@/features/auth/components/role-guard';
+import { useRoleAccess } from '@/features/auth/hooks/use-role-access';
 import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -37,6 +39,9 @@ export function CompetitionCard({
 }: CompetitionCardProps) {
   const router = useRouter();
   const athletesQuery = useAthletes(competition.id, '');
+  const { isAllowed: canManageUsers } = useRoleAccess({
+    deny: ['DESK', 'PUBLIC'],
+  });
   const readiness = athletesQuery.data
     ? buildAthleteReadinessSummary(athletesQuery.data)
     : null;
@@ -116,15 +121,17 @@ export function CompetitionCard({
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
-          <Button
-            variant={isSelected ? 'secondary' : 'outline'}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(competition.id);
-            }}
-          >
-            {isSelected ? 'Gerindo usuários' : 'Gerir usuários'}
-          </Button>
+          {canManageUsers ? (
+            <Button
+              variant={isSelected ? 'secondary' : 'outline'}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect(competition.id);
+              }}
+            >
+              {isSelected ? 'Gerindo usuários' : 'Gerir usuários'}
+            </Button>
+          ) : null}
           <Button
             variant={isActive ? 'secondary' : 'outline'}
             onClick={(event) => {
@@ -148,15 +155,17 @@ export function CompetitionCard({
               : entry.label}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Link
-            href={`/competitions/${competition.id}`}
-            className="sm:flex-1 lg:max-w-[220px]"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Button className="w-full" variant="default">
-              Editar competição
-            </Button>
-          </Link>
+          <RoleGuard deny={['DESK', 'PUBLIC']}>
+            <Link
+              href={`/competitions/${competition.id}`}
+              className="sm:flex-1 lg:max-w-[220px]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Button className="w-full" variant="default">
+                Editar competição
+              </Button>
+            </Link>
+          </RoleGuard>
         </div>
       </CardContent>
     </Card>

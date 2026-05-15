@@ -80,16 +80,20 @@ export default function KeyGroupDetailPage({
     queries: (allGroupsQuery.data ?? []).map((group) => ({
       queryKey: ['key-group-builder-detail', group.id],
       queryFn: () => getKeyGroup(group.id),
-      enabled: Boolean(activeCompetitionId) && group.athletes.length === 0,
+      enabled: Boolean(activeCompetitionId),
     })),
   });
 
   const resolvedGroups = useMemo(() => {
     return (allGroupsQuery.data ?? []).map((group, index) => {
       const detail = allGroupDetailQueries[index]?.data;
-      return group.athletes.length > 0 ? group : detail ?? group;
+      return detail ?? group;
     });
   }, [allGroupDetailQueries, allGroupsQuery.data]);
+  const isCompetitionReadinessLoading =
+    allGroupsQuery.isLoading || allGroupDetailQueries.some((query) => query.isLoading);
+  const hasCompetitionReadinessError =
+    allGroupsQuery.isError || allGroupDetailQueries.some((query) => query.isError);
 
   useEffect(() => {
     setNameDraft(keyGroup?.name ?? '');
@@ -129,12 +133,52 @@ export default function KeyGroupDetailPage({
     () => buildAthleteReadinessSummary(athletesDraft),
     [athletesDraft],
   );
+  const competitionKeyGroupsReadiness = useMemo(() => {
+    if (isCompetitionReadinessLoading || hasCompetitionReadinessError) {
+      return null;
+    }
+
+    const incompleteGroups = resolvedGroups.filter((group) => group.athletes.length < 2).length;
+    const groupsWithoutFights = resolvedGroups.filter(
+      (group) => group.athletes.length >= 2 && group.fights.length === 0,
+    ).length;
+
+    return {
+      totalGroups: resolvedGroups.length,
+      incompleteGroups,
+      groupsWithoutFights,
+      canAdvanceToDistribution:
+        resolvedGroups.length > 0 &&
+        incompleteGroups === 0 &&
+        groupsWithoutFights === 0,
+    };
+  }, [hasCompetitionReadinessError, isCompetitionReadinessLoading, resolvedGroups]);
   const keyGroupStatus = useMemo(() => {
     if (isLocked) {
+      if (isCompetitionReadinessLoading) {
+        return {
+          label: 'Travada',
+          description:
+            'A chave foi finalizada. O sistema ainda está confirmando se o restante da competição já pode seguir para distribuição.',
+          tone: 'locked' as const,
+        };
+      }
+
+      if (hasCompetitionReadinessError || !competitionKeyGroupsReadiness) {
+        return {
+          label: 'Travada',
+          description:
+            'A chave foi finalizada, mas o estado global das outras chaves ainda não pôde ser confirmado.',
+          tone: 'locked' as const,
+        };
+      }
+
       return {
         label: 'Travada',
         description:
-          'A chave foi finalizada e já pode seguir para a distribuição das áreas.',
+          competitionKeyGroupsReadiness.canAdvanceToDistribution
+            ? 'A chave foi finalizada e a competição já pode seguir para a distribuição das áreas.'
+            : 'A chave foi finalizada, mas a competição ainda depende da revisão das outras chaves antes da distribuição.',
         tone: 'locked' as const,
       };
     }
@@ -154,7 +198,13 @@ export default function KeyGroupDetailPage({
         'A chave ainda está em montagem e precisa ser revisada antes da geração das lutas.',
       tone: 'open' as const,
     };
-  }, [fights.length, isLocked]);
+  }, [
+    competitionKeyGroupsReadiness,
+    fights.length,
+    hasCompetitionReadinessError,
+    isCompetitionReadinessLoading,
+    isLocked,
+  ]);
 
   async function handleSaveKeyGroup() {
     if (!keyGroup) {
@@ -475,7 +525,8 @@ export default function KeyGroupDetailPage({
             </CardContent>
           </Card>
 
-          {isLocked ? (
+          {isLocked &&
+          competitionKeyGroupsReadiness?.canAdvanceToDistribution ? (
             <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)]">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -488,6 +539,60 @@ export default function KeyGroupDetailPage({
                 </div>
                 <Link href="/areas/distribution">
                   <Button className="w-full lg:w-auto">Ir para distribuição</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : isLocked && isCompetitionReadinessLoading ? (
+            <Card className="border-4 border-slate-300 bg-slate-50 p-0 shadow-[6px_6px_0_0_rgba(148,163,184,0.16)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-slate-950">
+                    Confirmando a prontidão da competição
+                  </h2>
+                  <p className="text-sm text-slate-700">
+                    Esta chave já foi travada. Aguarde a conferência das outras chaves antes de avançar para a distribuição.
+                  </p>
+                </div>
+                <Link href="/key-groups">
+                  <Button variant="outline" className="w-full lg:w-auto">
+                    Voltar para chaves
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : isLocked && hasCompetitionReadinessError ? (
+            <Card className="border-4 border-red-300 bg-red-50 p-0 shadow-[6px_6px_0_0_rgba(248,113,113,0.16)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-red-950">
+                    Não foi possível confirmar o estado global
+                  </h2>
+                  <p className="text-sm text-red-900">
+                    Esta chave já foi travada, mas o sistema não conseguiu validar as demais chaves da competição.
+                  </p>
+                </div>
+                <Link href="/key-groups">
+                  <Button variant="outline" className="w-full lg:w-auto">
+                    Voltar para chaves
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          ) : isLocked ? (
+            <Card className="border-4 border-amber-300 bg-amber-50 p-0 shadow-[6px_6px_0_0_rgba(245,158,11,0.18)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-lg font-black tracking-tight text-amber-950">
+                    Continue revisando as outras chaves
+                  </h2>
+                  <p className="text-sm text-amber-900">
+                    Esta chave já foi travada, mas a competição ainda tem {competitionKeyGroupsReadiness?.incompleteGroups ?? 0} chave(s) incompleta(s) e {competitionKeyGroupsReadiness?.groupsWithoutFights ?? 0} sem lutas geradas.
+                  </p>
+                </div>
+                <Link href="/key-groups">
+                  <Button variant="outline" className="w-full lg:w-auto">
+                    Voltar para chaves
+                  </Button>
                 </Link>
               </CardContent>
             </Card>

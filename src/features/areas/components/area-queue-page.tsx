@@ -30,7 +30,9 @@ import { useToast } from '@/shared/ui/use-toast';
 const POLLING_INTERVAL = 4000;
 
 export default function AreaQueuePage({ areaId }: { areaId: string }) {
-  const [lastCalledFightLabel, setLastCalledFightLabel] = useState<string | null>(null);
+  const [lastCalledFightLabel, setLastCalledFightLabel] = useState<
+    string | null
+  >(null);
   const activeCompetitionId = useCompetitionStore(
     (state) => state.activeCompetitionId,
   );
@@ -48,8 +50,8 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
   const nextFight = queueQuery.data?.nextFight ?? null;
   const queue = queueQuery.data?.queue ?? [];
   const queuePreview = useMemo(() => {
-    const fights = [nextFight, ...queue].filter(
-      (fight): fight is Fight => Boolean(fight),
+    const fights = [nextFight, ...queue].filter((fight): fight is Fight =>
+      Boolean(fight),
     );
     const seen = new Set<string>();
 
@@ -62,7 +64,10 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
       return true;
     });
   }, [nextFight, queue]);
-  const nextSequence = queuePreview.slice(1, 4);
+  const nextSequence = useMemo(
+    () => queuePreview.filter((fight) => fight.status !== 'FINISHED').slice(1, 4),
+    [queuePreview],
+  );
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -183,7 +188,7 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
 
       {!queueQuery.isLoading && !queueQuery.isError && (
         <>
-          <section className="grid gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+          <section>
             <Card className="border-4 border-slate-900 p-0 shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
               <CardContent className="space-y-4 p-5">
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
@@ -194,7 +199,9 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                   <div className="rounded-[24px] border-4 border-slate-900 bg-amber-100 p-6">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
-                        className={getFightStatusBadgeClassName(nextFight.status)}
+                        className={getFightStatusBadgeClassName(
+                          nextFight.status,
+                        )}
                       >
                         {getFightStatusLabel(nextFight.status)}
                       </span>
@@ -213,9 +220,6 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                     <p className="mt-3 text-base text-slate-700">
                       {nextFight.areaName || area?.name || 'Sem area definida'}
                     </p>
-                    <p className="mt-2 text-sm text-slate-600">
-                      Prioridade operacional: esta deve ser a chamada ativa da area.
-                    </p>
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-slate-600">
@@ -224,72 +228,8 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                 )}
               </CardContent>
             </Card>
-
-            <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
-              <CardContent className="space-y-4 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                      Operacao
-                    </p>
-                    <h2 className="mt-2 text-2xl font-black text-slate-950">
-                      Chamada rapida
-                    </h2>
-                  </div>
-                  <Radio className="h-5 w-5 text-slate-500" />
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                  <StatusPill
-                    icon={<Activity className="h-4 w-4" />}
-                    label="Atualizacao"
-                    value={isRealtimeActive ? 'Tempo real' : 'Polling 4s'}
-                    tone={isRealtimeActive ? 'success' : 'warning'}
-                  />
-                  <StatusPill
-                    icon={<Rows3 className="h-4 w-4" />}
-                    label="Fila"
-                    value={`${queuePreview.length} luta(s)`}
-                  />
-                  <StatusPill
-                    icon={<Radio className="h-4 w-4" />}
-                    label="Estado"
-                    value={nextFight ? 'Pronta para chamada' : 'Fila vazia'}
-                    tone={nextFight ? 'success' : 'warning'}
-                  />
-                </div>
-
-                <Button
-                  onClick={() => void handleCallNext()}
-                  disabled={callNextMutation.isPending || !nextFight}
-                  className="h-16 w-full rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800"
-                >
-                  <Megaphone className="mr-2 h-5 w-5" />
-                  {callNextMutation.isPending
-                    ? 'Chamando...'
-                    : nextFight
-                      ? 'Chamar agora'
-                      : 'Fila vazia'}
-                </Button>
-
-                <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">
-                  <p className="font-semibold text-slate-900">
-                    Atalho do operador: `Enter`
-                  </p>
-                  <p className="mt-1">
-                    Aciona a chamada da próxima luta quando a fila estiver carregada.
-                  </p>
-                </div>
-
-                {lastCalledFightLabel ? (
-                  <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
-                    <p className="font-semibold">Última luta chamada</p>
-                    <p className="mt-1">{lastCalledFightLabel}</p>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
           </section>
+        
 
           <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
             <CardContent className="space-y-4 p-5">
@@ -298,9 +238,6 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                   <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
                     Na sequencia
                   </p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    Visao de curto prazo da fila
-                  </h2>
                 </div>
                 <Rows3 className="h-5 w-5 text-slate-400" />
               </div>
@@ -337,10 +274,14 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
               <Table className="rounded-none border-0">
                 <TableHeader className="bg-slate-100">
                   <TableRow className="hover:bg-slate-100">
-                    <TableHead>Posicao</TableHead>
-                    <TableHead>Luta</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Categoria</TableHead>
+                    <TableHead className="w-16 whitespace-nowrap sm:w-20">
+                      Posicao
+                    </TableHead>
+                    <TableHead className="w-full min-w-[14rem]">Luta</TableHead>
+                    <TableHead className="w-16 whitespace-nowrap sm:w-24">
+                      Status
+                    </TableHead>
+                    {/* <TableHead>Categoria</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -361,28 +302,56 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                           index === 0 ? 'bg-amber-50 hover:bg-amber-50' : ''
                         }
                       >
-                        <TableCell className="font-semibold">
+                        <TableCell className="w-16 whitespace-nowrap font-semibold sm:w-20">
                           {index + 1}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="w-full min-w-[14rem]">
                           {fight.athleteA?.name || 'A definir'} vs{' '}
                           {fight.athleteB?.name || 'A definir'}
                         </TableCell>
-                        <TableCell>
-                          <span
-                            className={getFightStatusBadgeClassName(
-                              fight.status,
-                            )}
-                          >
-                            {getFightStatusLabel(fight.status)}
-                          </span>
+                        <TableCell className="w-16 whitespace-nowrap sm:w-24">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-3 w-3 shrink-0 rounded-full md:hidden ${getFightStatusDotClassName(
+                                fight.status,
+                              )}`}
+                              aria-hidden="true"
+                              title={getFightStatusLabel(fight.status)}
+                            />
+                            <span
+                              className={`hidden md:inline-flex ${getFightStatusBadgeClassName(
+                                fight.status,
+                              ).replace('inline-flex ', '')}`}
+                            >
+                              {getFightStatusLabel(fight.status)}
+                            </span>
+                          </div>
                         </TableCell>
-                        <TableCell>{fight.categoryName || '-'}</TableCell>
+                        {/* <TableCell>{fight.categoryName || '-'}</TableCell> */}
                       </TableRow>
                     ))
                   )}
                 </TableBody>
               </Table>
+            </div>
+            <div className="border-t-4 border-slate-900 bg-slate-50 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-slate-600">
+                <span className="font-black uppercase tracking-[0.14em] text-slate-500">
+                  Legenda
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-amber-500" />
+                  Agendada
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-blue-500" />
+                  Em andamento
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                  Finalizada
+                </span>
+              </div>
             </div>
           </Card>
         </>
@@ -397,6 +366,18 @@ function getFightLabel(fight: Fight | null) {
   }
 
   return `${fight.athleteA?.name || 'A definir'} vs ${fight.athleteB?.name || 'A definir'}`;
+}
+
+function getFightStatusDotClassName(status: Fight['status']) {
+  if (status === 'IN_PROGRESS') {
+    return 'bg-blue-500';
+  }
+
+  if (status === 'FINISHED') {
+    return 'bg-emerald-500';
+  }
+
+  return 'bg-amber-500';
 }
 
 function StatusPill({

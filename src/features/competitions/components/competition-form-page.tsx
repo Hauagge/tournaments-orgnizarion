@@ -45,7 +45,11 @@ export default function CompetitionFormPage({
         description: `${savedCompetition.name} foi salva com sucesso.`,
         variant: 'success',
       });
-      router.push('/competitions');
+      router.push(
+        isEditing
+          ? '/competitions'
+          : `/competitions/${savedCompetition.id}/start`,
+      );
     } catch (error) {
       toast({
         title: 'Falha ao salvar',
@@ -74,11 +78,12 @@ export default function CompetitionFormPage({
           <h1 className="mt-2 text-4xl font-black tracking-tight">
             {isEditing
               ? 'Atualize as regras da competição'
-              : 'Configure uma nova competição'}
+              : 'Defina a estrutura base da competição'}
           </h1>
           <p className="mt-3 max-w-2xl text-slate-600">
-            Defina o formato do torneio, duração das lutas e tolerâncias usadas
-            nas regras de pesagem e divisão etária.
+            {isEditing
+              ? 'Ajuste formato, duração das lutas e tolerâncias usadas nas regras de pesagem e divisão etária.'
+              : 'Preencha apenas as regras que definem o torneio. Atletas, pesagem e montagem das chaves ficam na próxima etapa.'}
           </p>
         </div>
       </header>

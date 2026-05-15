@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { Clock3, Play, Trophy } from 'lucide-react';
+import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
+import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { useAuthStore } from '@/features/auth/stores/useAuthStore';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
@@ -101,6 +103,7 @@ export default function FightsTab() {
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
   const token = useAuthStore((state) => state.token);
   const competitionQuery = useCompetition(activeCompetitionId ?? '');
+  const athletesQuery = useAthletes(activeCompetitionId, '');
   const realtime = useCompetitionSocket({
     token,
     competitionId: activeCompetitionId,
@@ -211,9 +214,24 @@ export default function FightsTab() {
     () => fights.filter((fight) => !fight.areaId),
     [fights],
   );
-  const flowEntry = getCompetitionEntry(competitionQuery.data?.mode ?? 'KEYS');
+  const readiness = athletesQuery.data
+    ? buildAthleteReadinessSummary(athletesQuery.data)
+    : null;
+  const flowEntry = competitionQuery.data
+    ? getCompetitionEntry(competitionQuery.data.mode, readiness)
+    : null;
   const contextualNextStep = useMemo(() => {
     if (fights.length === 0) {
+      if (!flowEntry) {
+        return {
+          href: null,
+          label: '',
+          title: 'Carregando a etapa correta da competição.',
+          description:
+            'Aguarde a identificação do tipo da competição antes de seguir para a geração das lutas.',
+        };
+      }
+
       return {
         href: flowEntry.href,
         label: flowEntry.label,
@@ -234,7 +252,7 @@ export default function FightsTab() {
     }
 
     return null;
-  }, [fights.length, flowEntry.href, flowEntry.label, unassignedFights.length]);
+  }, [fights.length, flowEntry, unassignedFights.length]);
 
   async function handleStartFight(fightId: string) {
     try {
@@ -331,11 +349,11 @@ export default function FightsTab() {
         </div>
       </header>
 
-      {!hasHydrated && <StateCard message="Carregando competicao ativa..." />}
+      {!hasHydrated && <StateCard message="Carregando competição ativa..." />}
 
       {hasHydrated && !activeCompetitionId && (
         <StateCard
-          message="Selecione uma competicao no topo para listar as lutas."
+          message="Selecione uma competição no topo para listar as lutas."
           tone="warning"
         />
       )}
@@ -347,7 +365,7 @@ export default function FightsTab() {
               <label className="block space-y-2">
                 <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
                   <Clock3 className="h-4 w-4" />
-                  Area
+                  Área
                 </span>
                 <select
                   value={areaFilter}
@@ -400,11 +418,20 @@ export default function FightsTab() {
                   </p>
                 </div>
 
-                <Link href={contextualNextStep.href}>
-                  <Button className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800">
-                    {contextualNextStep.label}
+                {contextualNextStep.href ? (
+                  <Link href={contextualNextStep.href}>
+                    <Button className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800">
+                      {contextualNextStep.label}
+                    </Button>
+                  </Link>
+                ) : (
+                  <Button
+                    disabled
+                    className="h-12 rounded-2xl border-4 border-slate-300 bg-slate-200 px-5 text-sm font-black uppercase tracking-[0.12em] text-slate-500"
+                  >
+                    Aguarde
                   </Button>
-                </Link>
+                )}
               </CardContent>
             </Card>
           ) : (

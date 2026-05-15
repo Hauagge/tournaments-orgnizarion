@@ -173,10 +173,10 @@ export function normalizeArea(input: unknown): Area {
   const record = isObject(input) ? input : {};
   const queue = readArray(record, ['queue', 'fights']);
   const nextFightObject = readObject(record, [
+    'currentFight',
     'highlightedFight',
     'nextFight',
     'next',
-    'currentFight',
   ]);
 
   return {
@@ -219,10 +219,10 @@ export function normalizeAreaQueueResponse(input: AreaQueueApiResponse): AreaQue
   const areaObject = readObject(record, ['area']);
   const queueRaw = readArray(record, ['queue', 'fights', 'items']);
   const nextFightObject = readObject(record, [
+    'currentFight',
     'highlightedFight',
     'nextFight',
     'next',
-    'currentFight',
   ]);
   const queue = queueRaw.map(normalizeAreaFight);
   const nextFight = nextFightObject

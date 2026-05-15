@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Plus, Settings2 } from 'lucide-react';
 import { useCreateAreas, useAreas } from '@/features/areas/hooks/use-areas';
+import { RoleGuard } from '@/features/auth/components/role-guard';
+import { useRoleAccess } from '@/features/auth/hooks/use-role-access';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
 import { Card, CardContent } from '@/shared/ui/card';
@@ -19,6 +21,9 @@ export default function AreasPage() {
   const areasQuery = useAreas(activeCompetitionId);
   const createMutation = useCreateAreas(activeCompetitionId);
   const { toast } = useToast();
+  const { isAllowed: canCreateAreas } = useRoleAccess({
+    deny: ['DESK', 'PUBLIC'],
+  });
 
   useEffect(() => {
     setAreaNames((current) => {
@@ -70,11 +75,13 @@ export default function AreasPage() {
             </p>
           </div>
 
-          <Link href="/areas/distribution">
-            <Button className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800">
-              Distribuir lutas
-            </Button>
-          </Link>
+          <RoleGuard deny={['DESK', 'PUBLIC']}>
+            <Link href="/areas/distribution">
+              <Button className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800">
+                Distribuir lutas
+              </Button>
+            </Link>
+          </RoleGuard>
         </div>
       </header>
 
@@ -89,59 +96,69 @@ export default function AreasPage() {
 
       {activeCompetitionId && (
         <>
-          <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-            <Card className="border-4 border-slate-900 p-0">
-              <CardContent className="space-y-5 p-5">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    Criar areas
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black text-slate-950">
-                    Defina quantidade e nomes
-                  </h2>
-                </div>
+          <div
+            className={`grid gap-6 ${
+              canCreateAreas
+                ? 'xl:grid-cols-[0.9fr_1.1fr]'
+                : 'xl:grid-cols-1'
+            }`}
+          >
+            <RoleGuard deny={['DESK', 'PUBLIC']}>
+              <Card className="border-4 border-slate-900 p-0">
+                <CardContent className="space-y-5 p-5">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                      Criar areas
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-slate-950">
+                      Defina quantidade e nomes
+                    </h2>
+                  </div>
 
-                <label className="block space-y-2">
-                  <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
-                    Quantidade de areas
-                  </span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={areaCount}
-                    onChange={(event) => setAreaCount(Math.max(1, Number(event.target.value) || 1))}
-                  />
-                </label>
+                  <label className="block space-y-2">
+                    <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                      Quantidade de areas
+                    </span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={areaCount}
+                      onChange={(event) =>
+                        setAreaCount(Math.max(1, Number(event.target.value) || 1))
+                      }
+                    />
+                  </label>
 
-                <div className="space-y-3">
-                  {areaNames.map((name, index) => (
-                    <label key={index} className="block space-y-2">
-                      <span className="text-sm font-semibold text-slate-700">
-                        Nome da area {index + 1}
-                      </span>
-                      <Input
-                        value={name}
-                        onChange={(event) => {
-                          const next = [...areaNames];
-                          next[index] = event.target.value;
-                          setAreaNames(next);
-                        }}
-                        placeholder={`Ex.: Tatame ${index + 1}`}
-                      />
-                    </label>
-                  ))}
-                </div>
+                  <div className="space-y-3">
+                    {areaNames.map((name, index) => (
+                      <label key={index} className="block space-y-2">
+                        <span className="text-sm font-semibold text-slate-700">
+                          Nome da area {index + 1}
+                        </span>
+                        <Input
+                          value={name}
+                          onChange={(event) => {
+                            const next = [...areaNames];
+                            next[index] = event.target.value;
+                            setAreaNames(next);
+                          }}
+                          placeholder={`Ex.: Tatame ${index + 1}`}
+                        />
+                      </label>
+                    ))}
+                  </div>
 
-                <Button
-                  onClick={() => void handleCreateAreas()}
-                  disabled={!activeCompetitionId || createMutation.isPending}
-                  className="w-full"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {createMutation.isPending ? 'Salvando...' : 'Criar areas'}
-                </Button>
-              </CardContent>
-            </Card>
+                  <Button
+                    onClick={() => void handleCreateAreas()}
+                    disabled={!activeCompetitionId || createMutation.isPending}
+                    className="w-full"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {createMutation.isPending ? 'Salvando...' : 'Criar areas'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </RoleGuard>
 
             <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
               <CardContent className="space-y-4 p-5">

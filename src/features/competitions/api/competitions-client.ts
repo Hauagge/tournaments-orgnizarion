@@ -23,6 +23,40 @@ type CompetitionListResponse =
       error?: unknown;
     };
 
+function extractCompetitionResponse(response: unknown): unknown {
+  if (typeof response !== 'object' || response === null) {
+    return response;
+  }
+
+  const record = response as Record<string, unknown>;
+
+  if (record.data && typeof record.data === 'object' && record.data !== null) {
+    const dataRecord = record.data as Record<string, unknown>;
+
+    if (dataRecord.competition) {
+      return dataRecord.competition;
+    }
+
+    if (dataRecord.item) {
+      return dataRecord.item;
+    }
+
+    if (dataRecord.id || dataRecord._id) {
+      return dataRecord;
+    }
+  }
+
+  if (record.competition) {
+    return record.competition;
+  }
+
+  if (record.item) {
+    return record.item;
+  }
+
+  return response;
+}
+
 function normalizeCompetitionListResponse(
   response: CompetitionListResponse,
 ): Competition[] {
@@ -50,19 +84,28 @@ export function getCompetition(id: string) {
   return apiFetch<unknown>(`${COMPETITIONS_PATH}/${id}`, {
     method: 'GET',
     cache: 'no-store',
-  }).then((response) => normalizeCompetition(response) as Competition);
+  }).then(
+    (response) =>
+      normalizeCompetition(extractCompetitionResponse(response)) as Competition,
+  );
 }
 
 export function createCompetition(payload: CompetitionPayload) {
   return apiFetch<unknown>(COMPETITIONS_PATH, {
     method: 'POST',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeCompetition(response) as Competition);
+  }).then(
+    (response) =>
+      normalizeCompetition(extractCompetitionResponse(response)) as Competition,
+  );
 }
 
 export function updateCompetition(id: string, payload: CompetitionPayload) {
   return apiFetch<unknown>(`${COMPETITIONS_PATH}/${id}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
-  }).then((response) => normalizeCompetition(response) as Competition);
+  }).then(
+    (response) =>
+      normalizeCompetition(extractCompetitionResponse(response)) as Competition,
+  );
 }

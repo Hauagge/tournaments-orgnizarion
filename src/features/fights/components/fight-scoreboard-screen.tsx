@@ -344,6 +344,11 @@ export function FightScoreboardScreen({
     useState<WinnerAnnouncement | null>(null);
   const [areaAnnouncement, setAreaAnnouncement] =
     useState<WinnerAnnouncement | null>(null);
+  const [lastScoreChange, setLastScoreChange] = useState<{
+    side: 'A' | 'B';
+    key: ScoreKey;
+    delta: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!fight) {
@@ -642,7 +647,22 @@ export function FightScoreboardScreen({
         },
       };
     });
+    setLastScoreChange({ side, key, delta });
   }
+
+  useEffect(() => {
+    if (!lastScoreChange) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setLastScoreChange((current) =>
+        current === lastScoreChange ? null : current,
+      );
+    }, 650);
+
+    return () => window.clearTimeout(timeout);
+  }, [lastScoreChange]);
 
   function toggleTimer() {
     if (isPublicMode) {
@@ -868,6 +888,7 @@ export function FightScoreboardScreen({
                 score={scoreboard.playerA}
                 onChangeScore={updateScore}
                 interactive={false}
+                publicMode
               />
 
               <section className="flex min-h-0 flex-col rounded-[32px] border-4 border-slate-900 bg-slate-950 px-5 py-6 text-white shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
@@ -893,6 +914,7 @@ export function FightScoreboardScreen({
                 score={scoreboard.playerB}
                 onChangeScore={updateScore}
                 interactive={false}
+                publicMode
               />
             </div>
           )}
@@ -936,6 +958,8 @@ export function FightScoreboardScreen({
         score={scoreboard.playerA}
         onChangeScore={updateScore}
         interactive={!isPublicMode}
+        publicMode={false}
+        lastScoreChange={lastScoreChange}
       />
 
       <section className="border-y-4 border-slate-900 bg-slate-950 px-5 py-6 text-white lg:border-x-4 lg:border-y-0">
@@ -1176,6 +1200,8 @@ export function FightScoreboardScreen({
         score={scoreboard.playerB}
         onChangeScore={updateScore}
         interactive={!isPublicMode}
+        publicMode={false}
+        lastScoreChange={lastScoreChange}
       />
 
       <WinnerOverlay
@@ -1197,6 +1223,8 @@ function ScorePanel({
   score,
   onChangeScore,
   interactive,
+  publicMode = false,
+  lastScoreChange = null,
 }: {
   side: 'A' | 'B';
   name: string;
@@ -1204,6 +1232,12 @@ function ScorePanel({
   score: PlayerScore;
   onChangeScore: (side: 'A' | 'B', key: ScoreKey, delta: number) => void;
   interactive: boolean;
+  publicMode?: boolean;
+  lastScoreChange?: {
+    side: 'A' | 'B';
+    key: ScoreKey;
+    delta: number;
+  } | null;
 }) {
   const themeClassName =
     side === 'A'
@@ -1213,37 +1247,61 @@ function ScorePanel({
     side === 'A'
       ? 'bg-[radial-gradient(circle_at_top,#fecaca_0%,#dc2626_45%,#7f1d1d_100%)] text-white'
       : 'bg-[radial-gradient(circle_at_top,#dbeafe_0%,#2563eb_45%,#0f172a_100%)] text-white';
+  const shellClassName = publicMode ? 'px-6 py-7 2xl:px-8 2xl:py-8' : 'px-5 py-6';
+  const heroPaddingClassName = publicMode
+    ? 'px-6 py-6 2xl:px-7 2xl:py-7'
+    : 'px-5 py-5';
+  const athleteTitleClassName = publicMode
+    ? 'mt-3 text-4xl font-black leading-tight text-white xl:text-5xl 2xl:text-6xl'
+    : 'mt-2 text-3xl font-black text-white';
+  const academyClassName = publicMode
+    ? 'mt-3 text-lg font-semibold text-white/85 xl:text-xl'
+    : 'mt-2 text-sm font-semibold text-white/80';
+  const scoreCardPaddingClassName = publicMode
+    ? 'mt-6 px-6 py-6 2xl:px-7 2xl:py-7'
+    : 'mt-5 px-5 py-4';
+  const totalPointsClassName = publicMode
+    ? 'mt-3 text-8xl font-black leading-none xl:text-[7rem] 2xl:text-[8.5rem]'
+    : 'mt-2 text-6xl font-black';
+  const statsGridClassName = publicMode ? 'mt-5 gap-4' : 'mt-4 gap-3';
+  const statCardClassName = publicMode ? 'px-4 py-4 2xl:px-5 2xl:py-5' : 'px-3 py-3';
+  const statLabelClassName = publicMode
+    ? 'text-sm font-black uppercase tracking-[0.18em] text-white/70 xl:text-base'
+    : 'text-[11px] font-black uppercase tracking-[0.16em] text-white/65';
+  const statValueClassName = publicMode
+    ? 'mt-2 text-4xl font-black text-white xl:text-5xl 2xl:text-6xl'
+    : 'mt-1 text-2xl font-black text-white';
 
   return (
-    <section className={`overflow-y-auto px-5 py-6 ${themeClassName}`}>
+    <section className={`overflow-y-auto ${shellClassName} ${themeClassName}`}>
       <div
-        className={`rounded-[28px] border-4 border-slate-900 px-5 py-5 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] ${heroCardClassName}`}
+        className={`rounded-[28px] border-4 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] ${heroPaddingClassName} ${heroCardClassName}`}
       >
         <p className="text-xs font-black uppercase tracking-[0.18em] text-white/75">
           Atleta {side}
         </p>
-        <h3 className="mt-2 text-3xl font-black text-white">{name}</h3>
-        <p className="mt-2 text-sm font-semibold text-white/80">{academy}</p>
+        <h3 className={athleteTitleClassName}>{name}</h3>
+        <p className={academyClassName}>{academy}</p>
 
-        <div className="mt-5 rounded-[24px] border-4 border-white/60 bg-slate-950/35 px-5 py-4 text-center text-white backdrop-blur-sm">
+        <div className={`rounded-[24px] border-4 border-white/60 bg-slate-950/35 text-center text-white backdrop-blur-sm ${scoreCardPaddingClassName}`}>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">
             Pontos
           </p>
-          <p className="mt-2 text-6xl font-black">{totalPoints(score)}</p>
-          <div className="mt-4 grid grid-cols-2 gap-3 text-left">
-            <div className="rounded-2xl border border-white/25 bg-white/10 px-3 py-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/65">
+          <p className={totalPointsClassName}>{totalPoints(score)}</p>
+          <div className={`grid grid-cols-2 text-left ${statsGridClassName}`}>
+            <div className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}>
+              <p className={statLabelClassName}>
                 Vantagem
               </p>
-              <p className="mt-1 text-2xl font-black text-white">
+              <p className={statValueClassName}>
                 {score.advantage}
               </p>
             </div>
-            <div className="rounded-2xl border border-white/25 bg-white/10 px-3 py-3">
-              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-white/65">
+            <div className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}>
+              <p className={statLabelClassName}>
                 Punição
               </p>
-              <p className="mt-1 text-2xl font-black text-white">
+              <p className={statValueClassName}>
                 {score.punishment}
               </p>
             </div>
@@ -1256,42 +1314,71 @@ function ScorePanel({
           {pointRules.map((rule) => (
             <article
               key={rule.key}
-              className="rounded-[24px] border-4 border-slate-900 bg-white px-5 py-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]"
+              className={`rounded-[24px] border-4 px-4 py-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] transition ${
+                lastScoreChange?.side === side && lastScoreChange.key === rule.key
+                  ? 'border-amber-500 bg-amber-50'
+                  : 'border-slate-900 bg-white'
+              }`}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-lg font-black text-slate-950">
-                    {rule.label}
-                  </p>
-                  <p className="mt-1 text-sm leading-5 text-slate-500">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-lg font-black text-slate-950">
+                      {rule.label}
+                    </p>
+                    <div className="rounded-full border-2 border-slate-900 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-700">
+                      {rule.points} {rule.points > 1 ? 'pts' : 'pt'}
+                    </div>
+                    <ShortcutPill
+                      label={resolveScoreShortcutLabel(side, rule.key)}
+                      className="border-slate-900/20 bg-slate-900 text-white"
+                    />
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-xs leading-4 text-slate-500">
                     {rule.description}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <div className="rounded-full border-2 border-slate-900 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-700">
-                    {rule.points} {rule.points > 1 ? 'pts' : 'pt'}
-                  </div>
-                  <ShortcutPill
-                    label={resolveScoreShortcutLabel(side, rule.key)}
-                  />
+
+                <div className="ml-auto flex shrink-0 items-center gap-2">
+                  {lastScoreChange?.side === side &&
+                  lastScoreChange.key === rule.key ? (
+                    <span
+                      className={`min-w-10 text-center text-sm font-black ${
+                        lastScoreChange.delta > 0 ? 'text-emerald-700' : 'text-red-700'
+                      }`}
+                    >
+                      {lastScoreChange.delta > 0 ? `+${rule.points}` : `-${rule.points}`}
+                    </span>
+                  ) : (
+                    <span className="min-w-10 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-400">
+                      Ação
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="mt-3 flex items-center justify-between gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-12 w-14 border-2 border-slate-900 text-2xl font-black"
+                  className="h-9 min-w-9 rounded-xl border-2 border-slate-900 px-0 text-lg font-black"
                   onClick={() => onChangeScore(side, rule.key, -rule.points)}
                 >
                   -
                 </Button>
-                <div className="min-w-24 text-center text-4xl font-black text-slate-950">
-                  {score[rule.key]}
+                <div className="flex flex-1 items-center justify-center rounded-2xl border-2 border-slate-200 bg-slate-50 px-3 py-1.5 text-center">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">
+                      Atual
+                    </p>
+                    <p className="mt-1 text-3xl font-black leading-none text-slate-950">
+                      {score[rule.key]}
+                    </p>
+                  </div>
                 </div>
                 <Button
                   type="button"
-                  className="h-12 w-14 text-2xl font-black"
+                  className="h-9 min-w-9 rounded-xl px-0 text-lg font-black"
                   onClick={() => onChangeScore(side, rule.key, rule.points)}
                 >
                   +
@@ -1379,14 +1466,14 @@ function TimerHero({
   durationSeconds: number;
 }) {
   return (
-    <div className="rounded-[32px] border-4 border-amber-300 bg-amber-50 px-4 py-8 text-center text-slate-950 shadow-[0_16px_40px_rgba(245,158,11,0.22)]">
-      <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+    <div className="rounded-[32px] border-4 border-amber-300 bg-amber-50 px-5 py-10 text-center text-slate-950 shadow-[0_20px_48px_rgba(245,158,11,0.24)] xl:px-6 xl:py-12 2xl:px-7 2xl:py-14">
+      <p className="text-sm font-black uppercase tracking-[0.22em] text-slate-500 xl:text-base">
         Tempo restante
       </p>
-      <p className="mt-4 font-mono text-[5rem] font-black leading-none tracking-[-0.08em] sm:text-[6.5rem] 2xl:text-[8.5rem]">
+      <p className="mt-5 font-mono text-[6rem] font-black leading-none tracking-[-0.08em] sm:text-[7.5rem] xl:text-[8.5rem] 2xl:text-[10rem]">
         {formatTime(remainingSeconds)}
       </p>
-      <p className="mt-4 text-sm font-semibold text-slate-500 2xl:text-base">
+      <p className="mt-5 text-base font-semibold text-slate-500 xl:text-lg 2xl:text-xl">
         Duração configurada: {formatTime(durationSeconds)}
       </p>
     </div>

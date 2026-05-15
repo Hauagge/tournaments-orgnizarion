@@ -1,3 +1,5 @@
+import { calculateAge } from '@/features/athletes/lib/calculate-age';
+
 export const athleteImportCsvColumns = [
   'Nome',
   'Faixa',
@@ -55,7 +57,7 @@ function readRecordValue(
   record: Record<string, unknown>,
   keys: readonly string[],
 ) {
-  for (const key of keys) {
+  for (const key of keys) { 
     const value = record[key];
     if (typeof value === 'string') {
       return value;
@@ -80,6 +82,17 @@ function readNumber(value: unknown, fallback = 0) {
   return fallback;
 }
 
+function formatBirthDate(value: string) {
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    const [year, month, day] = trimmed.split('-');
+    return `${day}/${month}/${year}`;
+  }
+
+  return trimmed;
+}
+
 function normalizeRowData(record: Record<string, unknown>) {
   const dataCandidate = isObject(record.data)
     ? record.data
@@ -88,13 +101,32 @@ function normalizeRowData(record: Record<string, unknown>) {
       : isObject(record.row)
         ? record.row
         : isObject(record.values)
-          ? record.values
+        ? record.values
           : record;
+  const rawBirthDate = readRecordValue(dataCandidate, [
+    'Data de Nasc',
+    'datadenasc',
+    'dataDeNasc',
+    'dataNascimento',
+    'dataNasc',
+    'birthDate',
+    'birthdate',
+    'datadenascimento',
+  ]);
+  const formattedBirthDate = formatBirthDate(rawBirthDate);
+  const providedAge = readRecordValue(dataCandidate, ['Idade', 'idade']);
+  const calculatedAge = calculateAge(rawBirthDate);
 
   return athleteImportCsvColumns.reduce<Record<string, string>>((acc, key) => {
     switch (key) {
       case 'Nome':
-        acc[key] = readRecordValue(dataCandidate, ['Nome', 'nome']);
+        acc[key] = readRecordValue(dataCandidate, [
+          'Nome',
+          'nome',
+          'nomecompleto',
+          'fullName',
+          'name',
+        ]);
         break;
       case 'Faixa':
         acc[key] = readRecordValue(dataCandidate, ['Faixa', 'faixa']);
@@ -113,18 +145,14 @@ function normalizeRowData(record: Record<string, unknown>) {
         ]);
         break;
       case 'Idade':
-        acc[key] = readRecordValue(dataCandidate, ['Idade', 'idade']);
+        acc[key] =
+          providedAge || (calculatedAge !== null ? String(calculatedAge) : '');
         break;
       case 'Sexo':
         acc[key] = readRecordValue(dataCandidate, ['Sexo', 'sexo']);
         break;
       case 'Data de Nasc':
-        acc[key] = readRecordValue(dataCandidate, [
-          'Data de Nasc',
-          'datadenasc',
-          'dataDeNasc',
-          'dataNascimento',
-        ]);
+        acc[key] = formattedBirthDate;
         break;
       default:
         acc[key] = readString(dataCandidate[key]);

@@ -89,7 +89,7 @@ export function normalizeCompetition(input: unknown): Competition {
   const record = isObject(input) ? input : {};
 
   return {
-    id: readIdentifier(record, ['id', '_id']) || crypto.randomUUID(),
+    id: readIdentifier(record, ['id', '_id']) || '',
     name: readString(record, ['name']) || 'Competição sem nome',
     mode: readMode(record),
     fightDurationSeconds:

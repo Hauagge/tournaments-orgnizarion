@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { CompetitionCard } from '@/features/competitions/components/competition-card';
 import { CompetitionUsersPanel } from '@/features/competitions/components/competition-users-panel';
+import { RoleGuard } from '@/features/auth/components/role-guard';
+import { useRoleAccess } from '@/features/auth/hooks/use-role-access';
 import { useCompetitions } from '@/features/competitions/hooks/use-competitions';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
@@ -19,6 +21,9 @@ export default function CompetitionsListPage() {
   const setActiveCompetitionId = useCompetitionStore(
     (state) => state.setActiveCompetitionId,
   );
+  const { isAllowed: canManageUsers } = useRoleAccess({
+    deny: ['DESK', 'PUBLIC'],
+  });
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(
     null,
   );
@@ -60,12 +65,14 @@ export default function CompetitionsListPage() {
             e divisao etaria.
           </p>
         </div>
-        <Link href="/competitions/new">
-          <Button className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nova competição
-          </Button>
-        </Link>
+        <RoleGuard deny={['DESK', 'PUBLIC']}>
+          <Link href="/competitions/new">
+            <Button className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova competição
+            </Button>
+          </Link>
+        </RoleGuard>
       </header>
 
       {isLoading && (
@@ -95,9 +102,11 @@ export default function CompetitionsListPage() {
             <p className="mt-2 text-slate-600">
               Crie a primeira competição para habilitar o switcher global.
             </p>
-            <Link href="/competitions/new" className="mt-4 inline-block">
-              <Button>Criar competição</Button>
-            </Link>
+            <RoleGuard deny={['DESK', 'PUBLIC']}>
+              <Link href="/competitions/new" className="mt-4 inline-block">
+                <Button>Criar competição</Button>
+              </Link>
+            </RoleGuard>
           </CardContent>
         </Card>
       )}
@@ -115,7 +124,7 @@ export default function CompetitionsListPage() {
         ))}
       </section>
 
-      {selectedCompetition && (
+      {selectedCompetition && canManageUsers && (
         <CompetitionUsersPanel competition={selectedCompetition} />
       )}
     </div>
