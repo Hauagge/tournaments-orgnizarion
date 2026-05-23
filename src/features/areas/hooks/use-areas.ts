@@ -4,7 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   callNextAreaFight,
   createAreas,
-  distributeAreaFights,
+  DistributeFightsFullPayload,
+  DistributeFightsIncrementalPayload,
+  distributeFightsFull,
+  distributeFightsIncremental,
   getAreaQueue,
   listAreas,
 } from '@/features/areas/api/areas-client';
@@ -59,17 +62,38 @@ export function useCreateAreas(competitionId: string | null) {
   });
 }
 
-export function useDistributeAreaFights(competitionId: string | null) {
+function invalidateAreaDistributionQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+  competitionId: string | null,
+) {
+  queryClient.invalidateQueries({
+    queryKey: [...areasQueryKey, competitionId],
+  });
+  queryClient.invalidateQueries({ queryKey: ['fights', competitionId] });
+  queryClient.invalidateQueries({ queryKey: areaQueueQueryKey });
+  queryClient.invalidateQueries({ queryKey: ['key-groups', competitionId] });
+}
+
+export function useDistributeFightsFull(competitionId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => distributeAreaFights(competitionId!),
+    mutationFn: (payload: DistributeFightsFullPayload) =>
+      distributeFightsFull(competitionId!, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [...areasQueryKey, competitionId],
-      });
-      queryClient.invalidateQueries({ queryKey: ['fights', competitionId] });
-      queryClient.invalidateQueries({ queryKey: areaQueueQueryKey });
+      invalidateAreaDistributionQueries(queryClient, competitionId);
+    },
+  });
+}
+
+export function useDistributeFightsIncremental(competitionId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: DistributeFightsIncrementalPayload) =>
+      distributeFightsIncremental(competitionId!, payload),
+    onSuccess: () => {
+      invalidateAreaDistributionQueries(queryClient, competitionId);
     },
   });
 }

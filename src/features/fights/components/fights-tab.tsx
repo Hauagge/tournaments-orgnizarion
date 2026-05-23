@@ -244,10 +244,10 @@ export default function FightsTab() {
     if (unassignedFights.length > 0) {
       return {
         href: '/areas/distribution',
-        label: 'Ir para distribuição',
+        label: 'Distribuição manual',
         title: 'Existem lutas sem área definida.',
         description:
-          `${unassignedFights.length} luta(s) ainda precisam entrar nas filas das áreas antes da operação.`,
+          `${unassignedFights.length} luta(s) ainda não receberam área. Use a distribuição manual.`,
       };
     }
 

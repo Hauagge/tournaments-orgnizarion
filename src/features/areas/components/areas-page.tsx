@@ -78,7 +78,7 @@ export default function AreasPage() {
           <RoleGuard deny={['DESK', 'PUBLIC']}>
             <Link href="/areas/distribution">
               <Button className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800">
-                Distribuir lutas
+                Distribuição manual
               </Button>
             </Link>
           </RoleGuard>

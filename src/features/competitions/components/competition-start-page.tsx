@@ -62,13 +62,13 @@ export default function CompetitionStartPage({
           'Carregar atletas',
           'Concluir pesagem',
           'Gerar categorias',
-          'Montar lutas e distribuir áreas',
+          'Montar lutas e revisar distribuição/áreas',
         ]
       : [
           'Carregar atletas',
           'Concluir pesagem',
           'Montar chaves',
-          'Distribuir lutas nas áreas',
+          'Gerar lutas por chave e revisar áreas',
         ];
   const actions: SetupAction[] = [
     {

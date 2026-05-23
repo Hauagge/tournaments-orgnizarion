@@ -122,10 +122,10 @@ export default function CategoriesPage() {
     if (unassignedFightsCount > 0) {
       return {
         href: '/areas/distribution',
-        label: 'Ir para distribuição',
-        title: 'Lutas prontas para distribuição',
+        label: 'Distribuição manual',
+        title: 'Lutas pendentes de área',
         description:
-          'As lutas já existem, mas ainda precisam entrar nas áreas antes da operação.',
+          'As lutas já existem, mas ainda precisam passar pelo endpoint manual de distribuição do backend antes da operação.',
       };
     }
 

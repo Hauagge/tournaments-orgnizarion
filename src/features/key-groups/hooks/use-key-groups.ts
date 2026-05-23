@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { areaQueueQueryKey, areasQueryKey } from '@/features/areas/hooks/use-areas';
 import {
   addAthleteToKeyGroup,
   createKeyGroup,
@@ -105,6 +106,8 @@ export function useGenerateKeyGroupFights(
         queryKey: [...keyGroupsQueryKey, competitionId, keyGroupId],
       });
       queryClient.invalidateQueries({ queryKey: ['fights', competitionId] });
+      queryClient.invalidateQueries({ queryKey: [...areasQueryKey, competitionId] });
+      queryClient.invalidateQueries({ queryKey: areaQueueQueryKey });
     },
   });
 }

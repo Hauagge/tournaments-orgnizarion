@@ -261,7 +261,7 @@ export default function KeyGroupsPage() {
                   Prontidão das chaves
                 </h2>
                 <p className="text-sm text-slate-600">
-                  Use este resumo para saber rapidamente o que ainda bloqueia a distribuição das áreas.
+                  Use este resumo para saber rapidamente o que ainda bloqueia a geração das lutas e a operação das áreas.
                 </p>
               </div>
 
@@ -289,7 +289,7 @@ export default function KeyGroupsPage() {
 
               {canAdvanceToDistribution ? (
                 <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
-                  Todas as chaves filtradas já estão prontas para seguir para distribuição.
+                  Todas as chaves filtradas já estão prontas. A geração por chave já pode alimentar a distribuição incremental no backend.
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -345,13 +345,13 @@ export default function KeyGroupsPage() {
 
               <div className="text-sm text-slate-600">
                 {canAdvanceToDistribution
-                  ? 'Fluxo liberado para distribuição.'
-                  : 'Ainda existem pendências antes da distribuição.'}
+                  ? 'Fluxo liberado para operação e auditoria das áreas.'
+                  : 'Ainda existem pendências antes da operação.'}
               </div>
 
               {canAdvanceToDistribution ? (
-                <Link href="/areas/distribution">
-                  <Button>Ir para distribuição</Button>
+                <Link href="/areas">
+                  <Button>Abrir áreas</Button>
                 </Link>
               ) : firstPendingGroup ? (
                 <Link href={`/key-groups/${firstPendingGroup.id}`}>

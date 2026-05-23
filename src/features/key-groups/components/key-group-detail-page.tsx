@@ -324,7 +324,8 @@ export default function KeyGroupDetailPage({
       await generateMutation.mutateAsync();
       toast({
         title: 'Lutas geradas',
-        description: 'Os confrontos todos contra todos foram atualizados.',
+        description:
+          'Os confrontos foram atualizados e o servidor já disparou a distribuição incremental desta chave.',
         variant: 'success',
       });
     } catch (error) {
@@ -438,7 +439,7 @@ export default function KeyGroupDetailPage({
                 </h1>
                 <p className="mt-3 max-w-3xl text-slate-600">
                   Ajuste os atletas da chave, gere os confrontos todos contra
-                  todos e trave quando a montagem estiver pronta.
+                  todos e trave quando a montagem estiver pronta. A distribuição de área agora é decidida no backend.
                 </p>
                 <p className="mt-2 max-w-3xl text-sm font-medium text-slate-700">
                   {keyGroupStatus.description}
@@ -515,7 +516,7 @@ export default function KeyGroupDetailPage({
               {athleteReadiness.approvedAthletes >= 2 &&
               athleteReadiness.pendingWeighIn === 0 ? (
                 <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
-                  A chave está pronta para gerar lutas: há atletas suficientes e nenhuma pesagem pendente.
+                  A chave está pronta para gerar lutas: há atletas suficientes, nenhuma pesagem pendente e o backend cuidará da distribuição incremental após a geração.
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
@@ -534,11 +535,11 @@ export default function KeyGroupDetailPage({
                     Chave pronta para a próxima etapa
                   </h2>
                   <p className="text-sm text-emerald-900">
-                    Esta chave já foi travada. Agora o próximo passo útil é distribuir as lutas nas áreas.
+                    Esta chave já foi travada. O próximo passo útil é abrir as áreas e validar a fila resultante; a distribuição incremental já acontece na geração das lutas.
                   </p>
                 </div>
-                <Link href="/areas/distribution">
-                  <Button className="w-full lg:w-auto">Ir para distribuição</Button>
+                <Link href="/areas">
+                  <Button className="w-full lg:w-auto">Abrir áreas</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -604,7 +605,7 @@ export default function KeyGroupDetailPage({
                     Continue revisando as chaves
                   </h2>
                   <p className="text-sm text-slate-700">
-                    As lutas desta chave já foram geradas. Volte para a listagem e siga a revisão das demais chaves antes da distribuição.
+                    As lutas desta chave já foram geradas e enviadas para distribuição incremental no backend. Volte para a listagem e siga a revisão das demais chaves.
                   </p>
                 </div>
                 <Link href="/key-groups">
