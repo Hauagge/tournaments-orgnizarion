@@ -29,6 +29,55 @@ export type CreateCategoryPayload = {
   mergeBelt: string | null;
 };
 
+export type DistributedCategoryMatchRules = {
+  belt: boolean;
+  weight: boolean;
+  age: boolean;
+  beltMix: boolean;
+};
+
+export type AllocatedAthleteDistribution = {
+  athleteId: string;
+  athleteName: string;
+  categoryId: string;
+  categoryName: string;
+  matchedRules: DistributedCategoryMatchRules;
+};
+
+export type NotAllocatedAthleteDistribution = {
+  athleteId: string;
+  athleteName: string;
+  reasons: string[];
+};
+
+export type DistributeAthletesSummary = {
+  totalAthletes: number;
+  allocatedCount: number;
+  notAllocatedCount: number;
+};
+
+export type DistributeAthletesResponse = {
+  success: boolean;
+  competitionId: string;
+  allocated: AllocatedAthleteDistribution[];
+  notAllocated: NotAllocatedAthleteDistribution[];
+  summary: DistributeAthletesSummary;
+};
+
+export type AddAthleteToCategoryPayload = {
+  athleteId: string;
+};
+
+export type AddAthleteToCategoryResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    competitionId: string;
+    categoryId: string;
+    athleteId: string;
+  };
+};
+
 export type CategoriesListResponse =
   | unknown[]
   | {
@@ -95,6 +144,43 @@ function readArray(record: Record<string, unknown>, keys: string[]) {
   }
 
   return [];
+}
+
+function readBoolean(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+
+    if (typeof value === 'boolean') {
+      return value;
+    }
+  }
+
+  return false;
+}
+
+function readStringArray(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string');
+    }
+  }
+
+  return [];
+}
+
+function readObject(
+  record: Record<string, unknown>,
+  keys: string[],
+) {
+  for (const key of keys) {
+    const value = record[key];
+    if (isObject(value)) {
+      return value;
+    }
+  }
+
+  return {};
 }
 
 function gramsToKilograms(value: number | null) {
@@ -168,4 +254,97 @@ export function normalizeCategoriesResponse(
     : [];
 
   return items.map(normalizeCategorySummary);
+}
+
+function normalizeDistributedCategoryMatchRules(
+  input: unknown,
+): DistributedCategoryMatchRules {
+  const record = isObject(input) ? input : {};
+
+  return {
+    belt: readBoolean(record, ['belt']),
+    weight: readBoolean(record, ['weight']),
+    age: readBoolean(record, ['age']),
+    beltMix: readBoolean(record, ['beltMix']),
+  };
+}
+
+function normalizeAllocatedAthleteDistribution(
+  input: unknown,
+): AllocatedAthleteDistribution {
+  const record = isObject(input) ? input : {};
+
+  return {
+    athleteId: readIdentifier(record, ['athleteId', 'athlete_id', 'id']) || '',
+    athleteName: readString(record, ['athleteName', 'athlete_name', 'name']),
+    categoryId:
+      readIdentifier(record, ['categoryId', 'category_id']) || '',
+    categoryName: readString(record, ['categoryName', 'category_name']),
+    matchedRules: normalizeDistributedCategoryMatchRules(record.matchedRules),
+  };
+}
+
+function normalizeNotAllocatedAthleteDistribution(
+  input: unknown,
+): NotAllocatedAthleteDistribution {
+  const record = isObject(input) ? input : {};
+
+  return {
+    athleteId: readIdentifier(record, ['athleteId', 'athlete_id', 'id']) || '',
+    athleteName: readString(record, ['athleteName', 'athlete_name', 'name']),
+    reasons: readStringArray(record, ['reasons']),
+  };
+}
+
+function normalizeDistributeAthletesSummary(
+  input: unknown,
+): DistributeAthletesSummary {
+  const record = isObject(input) ? input : {};
+
+  return {
+    totalAthletes: readNumber(record, ['totalAthletes']) ?? 0,
+    allocatedCount: readNumber(record, ['allocatedCount']) ?? 0,
+    notAllocatedCount: readNumber(record, ['notAllocatedCount']) ?? 0,
+  };
+}
+
+export function normalizeDistributeAthletesResponse(
+  input: unknown,
+): DistributeAthletesResponse {
+  const record = isObject(input) ? input : {};
+  const allocated = readArray(record, ['allocated']).map(
+    normalizeAllocatedAthleteDistribution,
+  );
+  const notAllocated = readArray(record, ['notAllocated']).map(
+    normalizeNotAllocatedAthleteDistribution,
+  );
+
+  return {
+    success: readBoolean(record, ['success']),
+    competitionId:
+      readIdentifier(record, ['competitionId', 'competition_id']) || '',
+    allocated,
+    notAllocated,
+    summary: normalizeDistributeAthletesSummary(record.summary),
+  };
+}
+
+export function normalizeAddAthleteToCategoryResponse(
+  input: unknown,
+): AddAthleteToCategoryResponse {
+  const record = isObject(input) ? input : {};
+  const data = readObject(record, ['data']);
+
+  return {
+    success: readBoolean(record, ['success']),
+    message:
+      readString(record, ['message']) ||
+      'Atleta adicionado à categoria com sucesso.',
+    data: {
+      competitionId:
+        readIdentifier(data, ['competitionId', 'competition_id']) || '',
+      categoryId: readIdentifier(data, ['categoryId', 'category_id']) || '',
+      athleteId: readIdentifier(data, ['athleteId', 'athlete_id']) || '',
+    },
+  };
 }
