@@ -6,12 +6,21 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import {
+  addAthleteToCategory,
   createCategory,
+  distributeAthletesInCategories,
   generateCategories,
   getCategory,
   listCategories,
 } from '@/features/categories/api/categories-client';
-import { CreateCategoryPayload } from '@/features/categories/types/category';
+import {
+  AddAthleteToCategoryResponse,
+  CreateCategoryPayload,
+  DistributeAthletesResponse,
+} from '@/features/categories/types/category';
+import { athletesQueryKey } from '@/features/athletes/hooks/use-athletes';
+import { fightsQueryKey } from '@/features/fights/hooks/use-fights';
+import { competitionsQueryKey } from '@/features/competitions/hooks/use-competitions';
 
 export const categoriesQueryKey = ['categories'] as const;
 export const categoryDetailQueryKey = ['category-detail'] as const;
@@ -57,6 +66,72 @@ export function useCreateCategory(competitionId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [...categoriesQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: categoryDetailQueryKey,
+      });
+    },
+  });
+}
+
+export function useDistributeAthletesInCategories(
+  competitionId: string | null,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    DistributeAthletesResponse,
+    Error,
+    boolean | undefined
+  >({
+    mutationFn: (dryRun: boolean = false) =>
+      distributeAthletesInCategories(competitionId!, dryRun),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...categoriesQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: categoryDetailQueryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...athletesQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...fightsQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: competitionsQueryKey,
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...competitionsQueryKey, competitionId],
+      });
+    },
+  });
+}
+
+export function useAddAthleteToCategory(competitionId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    AddAthleteToCategoryResponse,
+    Error,
+    {
+      categoryId: string;
+      athleteId: string;
+    }
+  >({
+    mutationFn: ({ categoryId, athleteId }) =>
+      addAthleteToCategory({
+        competitionId: competitionId!,
+        categoryId,
+        athleteId,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: [...categoriesQueryKey, competitionId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [...categoryDetailQueryKey, variables.categoryId],
       });
       queryClient.invalidateQueries({
         queryKey: categoryDetailQueryKey,
