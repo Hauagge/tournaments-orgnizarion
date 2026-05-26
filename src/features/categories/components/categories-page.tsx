@@ -1,7 +1,7 @@
 'use client';
 
+import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
 import { Filter, LoaderCircle, Search, Swords } from 'lucide-react';
 import { getWeighInStatusLabel } from '@/features/athletes/types/athlete';
 import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
@@ -17,7 +17,14 @@ import {
   CategorySummary,
   CreateCategoryPayload,
 } from '@/features/categories/types/category';
+import { AddAthleteToCategoryForm } from '@/features/categories/components/add-athlete-to-category-form';
+import { DistributeAthletesButton } from '@/features/categories/components/distribute-athletes-button';
 import { useFights, useGenerateFights } from '@/features/fights/hooks/use-fights';
+import {
+  useCreateKeyGroupFight,
+  useKeyGroup,
+  useKeyGroups,
+} from '@/features/key-groups/hooks/use-key-groups';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
   AlertDialogAction,
@@ -35,6 +42,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
@@ -332,6 +340,11 @@ export default function CategoriesPage() {
               <Swords className="mr-2 h-5 w-5" />
               {generateFightsMutation.isPending ? 'Gerando lutas...' : 'Gerar lutas'}
             </Button>
+            <DistributeAthletesButton
+              competitionId={activeCompetitionId}
+              disabled={!hasHydrated}
+              className="h-14 rounded-2xl border-4 border-slate-900 bg-emerald-600 px-6 text-base font-black uppercase tracking-[0.12em] text-white hover:bg-emerald-500 disabled:bg-emerald-300"
+            />
             <Button
               onClick={() => void handleGenerateCategories()}
               disabled={!activeCompetitionId || !hasHydrated || generateMutation.isPending}
@@ -807,8 +820,10 @@ export default function CategoriesPage() {
           )}
 
           <CategoryDetailDrawer
+            competitionId={activeCompetitionId}
             categoryId={selectedCategoryId}
             categories={categories}
+            athletes={athletes}
             isOpen={Boolean(selectedCategoryId)}
             isLoading={categoryDetailQuery.isLoading}
             isError={categoryDetailQuery.isError}
@@ -819,6 +834,12 @@ export default function CategoriesPage() {
             }
             onClose={() => setSelectedCategoryId(null)}
             detail={categoryDetailQuery.data ?? null}
+            onRefresh={async () => {
+              await Promise.all([
+                categoryDetailQuery.refetch(),
+                categoriesQuery.refetch(),
+              ]);
+            }}
           />
 
           <AlertDialog
@@ -880,34 +901,113 @@ function ReadinessMetric({
   );
 }
 
-function CategoryDetailDrawer({
+export function CategoryDetailDrawer({
+  competitionId,
   categoryId,
   categories,
+  athletes,
   detail,
   isError,
   isLoading,
   errorMessage,
   isOpen,
   onClose,
+  onRefresh,
 }: {
+  competitionId: string | null;
   categoryId: string | null;
   categories: CategorySummary[];
+  athletes: ReturnType<typeof useAthletes>['data'];
   detail: ReturnType<typeof useCategory>['data'] | null;
   isError: boolean;
   isLoading: boolean;
   errorMessage: string;
   isOpen: boolean;
   onClose: () => void;
+  onRefresh?: () => Promise<void> | void;
 }) {
+  const [isCreateFightDialogOpen, setIsCreateFightDialogOpen] = useState(false);
+  const [selectedKeyGroupId, setSelectedKeyGroupId] = useState('');
+  const [athleteAId, setAthleteAId] = useState('');
+  const [athleteBId, setAthleteBId] = useState('');
   const summary = useMemo(
     () => categories.find((category) => category.id === categoryId) ?? null,
     [categories, categoryId],
   );
+  const keyGroupsQuery = useKeyGroups(competitionId);
+  const categoryKeyGroups = useMemo(
+    () =>
+      (keyGroupsQuery.data ?? []).filter(
+        (keyGroup) => keyGroup.categoryId === detail?.id,
+      ),
+    [detail?.id, keyGroupsQuery.data],
+  );
+  const selectedKeyGroupQuery = useKeyGroup(competitionId, selectedKeyGroupId);
+  const createFightMutation = useCreateKeyGroupFight(
+    competitionId,
+    selectedKeyGroupId,
+  );
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsCreateFightDialogOpen(false);
+      setSelectedKeyGroupId('');
+      setAthleteAId('');
+      setAthleteBId('');
+    }
+  }, [isOpen]);
+
+  const selectedKeyGroupAthletes = selectedKeyGroupQuery.data?.athletes ?? [];
+  const athleteBOptions = useMemo(
+    () =>
+      selectedKeyGroupAthletes.filter((athlete) => athlete.id !== athleteAId),
+    [athleteAId, selectedKeyGroupAthletes],
+  );
+  const canCreateFight =
+    Boolean(competitionId) &&
+    selectedKeyGroupId.trim().length > 0 &&
+    athleteAId.trim().length > 0 &&
+    athleteBId.trim().length > 0 &&
+    athleteAId !== athleteBId &&
+    !createFightMutation.isPending;
+
+  async function handleCreateFight() {
+    if (!canCreateFight) {
+      return;
+    }
+
+    try {
+      await createFightMutation.mutateAsync({
+        athleteAId: Number(athleteAId),
+        athleteBId: Number(athleteBId),
+      });
+      toast({
+        title: 'Luta criada',
+        description: 'A nova luta foi adicionada à chave selecionada.',
+        variant: 'success',
+      });
+      setIsCreateFightDialogOpen(false);
+      setSelectedKeyGroupId('');
+      setAthleteAId('');
+      setAthleteBId('');
+      await onRefresh?.();
+    } catch (error) {
+      toast({
+        title: 'Falha ao criar luta',
+        description:
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : 'Não foi possível criar a luta. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="left-auto right-0 top-0 h-screen w-full max-w-2xl translate-x-0 translate-y-0 rounded-none border-l-4 border-slate-900 p-0">
-        <div className="flex h-full flex-col bg-white">
+      <DialogContent className="w-[95vw] max-w-2xl border-4 border-slate-900 p-0">
+        <div className="flex max-h-[85vh] flex-col bg-white">
           <DialogHeader className="border-b-4 border-slate-900 px-6 py-5">
             <DialogTitle className="text-2xl font-black text-slate-950">
               {detail?.name || summary?.name || 'Detalhe da categoria'}
@@ -944,6 +1044,45 @@ function CategoryDetailDrawer({
               </div>
             )}
 
+            {!isLoading && !isError && detail ? (
+              <Card className="border-4 border-slate-900 p-0">
+                <CardContent className="space-y-4 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                      <h2 className="text-lg font-black tracking-tight text-slate-950">
+                        Lutas da categoria
+                      </h2>
+                      <p className="text-sm text-slate-600">
+                        Crie manualmente uma nova luta usando atletas das chaves vinculadas a esta categoria.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCreateFightDialogOpen(true)}
+                      disabled={!competitionId || categoryKeyGroups.length === 0}
+                    >
+                      Criar nova luta
+                    </Button>
+                  </div>
+
+                  {keyGroupsQuery.isLoading ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                      Carregando chaves da categoria...
+                    </div>
+                  ) : categoryKeyGroups.length === 0 ? (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                      Nenhuma chave vinculada a esta categoria foi encontrada.
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                      {categoryKeyGroups.length} chave(s) disponível(is) para criação manual de luta.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : null}
+
             {isLoading && (
               <div className="flex items-center gap-3 rounded-2xl border-4 border-slate-900 bg-slate-50 px-4 py-4 text-slate-600">
                 <LoaderCircle className="h-5 w-5 animate-spin" />
@@ -956,50 +1095,208 @@ function CategoryDetailDrawer({
             )}
 
             {!isLoading && !isError && detail && detail.athletes.length === 0 && (
-              <StateCard
-                message="Esta categoria ainda nao possui atletas vinculados."
-                tone="empty"
-              />
+              <>
+                <AddAthleteToCategoryForm
+                  competitionId={competitionId}
+                  category={detail}
+                  athletes={athletes ?? []}
+                  onSuccess={onRefresh}
+                />
+                <StateCard
+                  message="Esta categoria ainda nao possui atletas vinculados."
+                  tone="empty"
+                />
+              </>
             )}
 
             {!isLoading && !isError && detail && detail.athletes.length > 0 && (
-              <Card className="border-4 border-slate-900 p-0">
-                <CardContent className="p-0">
-                  <div className="border-b-4 border-slate-900 bg-slate-100 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-600">
-                    Atletas da categoria
-                  </div>
-                  <div className="overflow-x-auto">
-                    <Table className="rounded-none border-0">
-                      <TableHeader className="bg-slate-50">
-                        <TableRow className="hover:bg-slate-50">
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Academia</TableHead>
-                          <TableHead>Faixa</TableHead>
-                          <TableHead>Status pesagem</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {detail.athletes.map((athlete) => (
-                          <TableRow key={athlete.id}>
-                            <TableCell className="font-medium">{athlete.name || '-'}</TableCell>
-                            <TableCell>{athlete.academy || '-'}</TableCell>
-                            <TableCell>{athlete.belt || '-'}</TableCell>
-                            <TableCell>
-                              <span className={statusBadgeClassName(athlete.weighInStatus)}>
-                                {getWeighInStatusLabel(athlete.weighInStatus)}
-                              </span>
-                            </TableCell>
+              <>
+                <AddAthleteToCategoryForm
+                  competitionId={competitionId}
+                  category={detail}
+                  athletes={athletes ?? []}
+                  onSuccess={onRefresh}
+                />
+                <Card className="border-4 border-slate-900 p-0">
+                  <CardContent className="p-0">
+                    <div className="border-b-4 border-slate-900 bg-slate-100 px-4 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-600">
+                      Atletas da categoria
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table className="rounded-none border-0">
+                        <TableHeader className="bg-slate-50">
+                          <TableRow className="hover:bg-slate-50">
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Academia</TableHead>
+                            <TableHead>Faixa</TableHead>
+                            <TableHead>Status pesagem</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                        </TableHeader>
+                        <TableBody>
+                          {detail.athletes.map((athlete) => (
+                            <TableRow key={athlete.id}>
+                              <TableCell className="font-medium">{athlete.name || '-'}</TableCell>
+                              <TableCell>{athlete.academy || '-'}</TableCell>
+                              <TableCell>{athlete.belt || '-'}</TableCell>
+                              <TableCell>
+                                <span className={statusBadgeClassName(athlete.weighInStatus)}>
+                                  {getWeighInStatusLabel(athlete.weighInStatus)}
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </div>
       </DialogContent>
+      <Dialog
+        open={isCreateFightDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsCreateFightDialogOpen(false);
+            setSelectedKeyGroupId('');
+            setAthleteAId('');
+            setAthleteBId('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-lg rounded-[28px] border-4 border-slate-900 p-0">
+          <div className="space-y-5 bg-white p-6">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-black text-slate-950">
+                Criar nova luta
+              </DialogTitle>
+              <DialogDescription className="text-slate-600">
+                Escolha a chave da categoria e selecione dois atletas para criar manualmente a nova luta.
+              </DialogDescription>
+            </DialogHeader>
+
+            {keyGroupsQuery.isLoading ? (
+              <StateCard message="Carregando chaves da categoria..." />
+            ) : categoryKeyGroups.length === 0 ? (
+              <StateCard
+                message="Nenhuma chave disponível para esta categoria."
+                tone="warning"
+              />
+            ) : (
+              <div className="space-y-4">
+                <label className="block space-y-2">
+                  <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                    Chave
+                  </span>
+                  <select
+                    value={selectedKeyGroupId}
+                    onChange={(event) => {
+                      setSelectedKeyGroupId(event.target.value);
+                      setAthleteAId('');
+                      setAthleteBId('');
+                    }}
+                    disabled={createFightMutation.isPending}
+                    className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione</option>
+                    {categoryKeyGroups.map((keyGroup) => (
+                      <option key={keyGroup.id} value={keyGroup.id}>
+                        {keyGroup.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {selectedKeyGroupId ? (
+                  selectedKeyGroupQuery.isLoading ? (
+                    <StateCard message="Carregando atletas da chave..." />
+                  ) : selectedKeyGroupQuery.isError ? (
+                    <StateCard
+                      message={
+                        selectedKeyGroupQuery.error instanceof Error
+                          ? selectedKeyGroupQuery.error.message
+                          : 'Falha ao carregar a chave.'
+                      }
+                      tone="error"
+                    />
+                  ) : selectedKeyGroupAthletes.length < 2 ? (
+                    <StateCard
+                      message="A chave precisa ter pelo menos dois atletas para criar uma nova luta."
+                      tone="warning"
+                    />
+                  ) : (
+                    <>
+                      <label className="block space-y-2">
+                        <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                          Atleta A
+                        </span>
+                        <select
+                          value={athleteAId}
+                          onChange={(event) => {
+                            const nextAthleteAId = event.target.value;
+                            setAthleteAId(nextAthleteAId);
+                            if (nextAthleteAId === athleteBId) {
+                              setAthleteBId('');
+                            }
+                          }}
+                          disabled={createFightMutation.isPending}
+                          className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Selecione</option>
+                          {selectedKeyGroupAthletes.map((athlete) => (
+                            <option key={athlete.id} value={athlete.id}>
+                              {athlete.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="block space-y-2">
+                        <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                          Atleta B
+                        </span>
+                        <select
+                          value={athleteBId}
+                          onChange={(event) => setAthleteBId(event.target.value)}
+                          disabled={createFightMutation.isPending}
+                          className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="">Selecione</option>
+                          {athleteBOptions.map((athlete) => (
+                            <option key={athlete.id} value={athlete.id}>
+                              {athlete.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </>
+                  )
+                ) : null}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateFightDialogOpen(false)}
+                disabled={createFightMutation.isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleCreateFight()}
+                disabled={!canCreateFight}
+              >
+                {createFightMutation.isPending ? 'Criando...' : 'Criar luta'}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

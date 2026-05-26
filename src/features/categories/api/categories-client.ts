@@ -1,9 +1,14 @@
 import { apiFetch } from '@/shared/api/fetch-client';
 import {
+  AddAthleteToCategoryPayload,
+  AddAthleteToCategoryResponse,
   CategoriesListResponse,
   CategoryDetail,
   CategorySummary,
   CreateCategoryPayload,
+  DistributeAthletesResponse,
+  normalizeAddAthleteToCategoryResponse,
+  normalizeDistributeAthletesResponse,
   normalizeCategoriesResponse,
   normalizeCategoryDetail,
 } from '@/features/categories/types/category';
@@ -50,6 +55,22 @@ export function generateCategories(competitionId: string) {
   );
 }
 
+export function distributeAthletesInCategories(
+  competitionId: string,
+  dryRun = false,
+) {
+  return apiFetch<unknown>(
+    `/competitions/${competitionId}/categories/distribute-athletes`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ dryRun }),
+    },
+  ).then(
+    (response) =>
+      normalizeDistributeAthletesResponse(response) as DistributeAthletesResponse,
+  );
+}
+
 export function createCategory(
   competitionId: string,
   payload: CreateCategoryPayload,
@@ -71,4 +92,29 @@ export function createCategory(
       mergeWithBelt: normalizedMergeBelt,
     }),
   });
+}
+
+export function addAthleteToCategory({
+  competitionId,
+  categoryId,
+  athleteId,
+}: {
+  competitionId: string;
+  categoryId: string;
+  athleteId: string;
+}) {
+  const payload: AddAthleteToCategoryPayload = {
+    athleteId,
+  };
+
+  return apiFetch<unknown>(
+    `/competitions/${competitionId}/categories/${categoryId}/athletes`,
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+  ).then(
+    (response) =>
+      normalizeAddAthleteToCategoryResponse(response) as AddAthleteToCategoryResponse,
+  );
 }
