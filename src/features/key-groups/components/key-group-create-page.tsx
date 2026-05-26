@@ -134,7 +134,10 @@ export default function KeyGroupCreatePage() {
         </h1>
         <p className="mt-3 max-w-3xl text-slate-600">
           Escolha até {maxGroupSize} atletas, vincule a categoria se fizer sentido e
-          prepare a geração automática de todos contra todos.
+          salve a estrutura inicial da chave.
+        </p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-700">
+          A chave pode ser criada mesmo com atletas ainda em pesagem, mas só atletas com pesagem aprovada podem entrar nela.
         </p>
       </header>
 

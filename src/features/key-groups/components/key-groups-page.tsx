@@ -91,12 +91,14 @@ export default function KeyGroupsPage() {
       hasGroupWithoutFights(group),
     ).length;
     const lockedCount = allDisplayGroups.filter((group) => group.locked).length;
+    const withFightsCount = allDisplayGroups.filter((group) => group.fights.length > 0).length;
 
     return {
       totalCount: allDisplayGroups.length,
       incompleteCount,
       withoutFightsCount,
       lockedCount,
+      withFightsCount,
     };
   }, [allDisplayGroups]);
   const groupsByStatus = useMemo(
@@ -126,6 +128,8 @@ export default function KeyGroupsPage() {
     readinessMetrics.totalCount > 0 &&
     readinessMetrics.incompleteCount === 0 &&
     readinessMetrics.withoutFightsCount === 0;
+  const canUseDistribution =
+    readinessMetrics.totalCount > 0 && readinessMetrics.withFightsCount > 0;
 
   const removeAthleteMutation = useMutation({
     mutationFn: ({
@@ -289,11 +293,15 @@ export default function KeyGroupsPage() {
 
               {canAdvanceToDistribution ? (
                 <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
-                  Todas as chaves filtradas já estão prontas. A geração por chave já pode alimentar a distribuição incremental no backend.
+                  Todas as chaves filtradas já estão prontas. Você pode redistribuir tudo ou seguir direto para operação, conforme o estado atual das filas.
+                </div>
+              ) : canUseDistribution ? (
+                <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
+                  Já existem chaves com lutas geradas. O fluxo incremental pode distribuir o que já está pronto sem esperar a competição inteira fechar.
                 </div>
               ) : (
                 <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-                  Ainda existem chaves pendentes. Revise primeiro as chaves incompletas ou sem lutas geradas antes de distribuir.
+                  Ainda não existe nenhuma chave com lutas geradas. Revise primeiro as chaves incompletas ou sem lutas antes de distribuir.
                 </div>
               )}
             </CardContent>
@@ -345,13 +353,17 @@ export default function KeyGroupsPage() {
 
               <div className="text-sm text-slate-600">
                 {canAdvanceToDistribution
-                  ? 'Fluxo liberado para operação e auditoria das áreas.'
-                  : 'Ainda existem pendências antes da operação.'}
+                  ? 'Fluxo liberado para redistribuição total, auditoria e operação das áreas.'
+                  : canUseDistribution
+                    ? 'Já existe material suficiente para distribuição incremental.'
+                    : 'Ainda não existe chave suficiente pronta para distribuir.'}
               </div>
 
-              {canAdvanceToDistribution ? (
-                <Link href="/areas">
-                  <Button>Abrir áreas</Button>
+              {canUseDistribution ? (
+                <Link href="/areas/distribution">
+                  <Button>
+                    {canAdvanceToDistribution ? 'Revisar distribuição' : 'Distribuir lutas geradas'}
+                  </Button>
                 </Link>
               ) : firstPendingGroup ? (
                 <Link href={`/key-groups/${firstPendingGroup.id}`}>

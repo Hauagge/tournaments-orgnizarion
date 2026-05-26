@@ -36,7 +36,7 @@ export function KeyGroupBuilder({
   const [search, setSearch] = useState('');
   const [academyFilter, setAcademyFilter] = useState('ALL');
   const [beltFilter, setBeltFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('APPROVED');
   const [minWeight, setMinWeight] = useState('');
   const [maxWeight, setMaxWeight] = useState('');
   const [minAge, setMinAge] = useState('');
@@ -226,6 +226,10 @@ export function KeyGroupBuilder({
                 </div>
               );
             })}
+          </div>
+
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            Atletas com pesagem pendente ou reprovada podem aparecer na busca, mas não podem ser adicionados à chave.
           </div>
         </CardContent>
       </Card>

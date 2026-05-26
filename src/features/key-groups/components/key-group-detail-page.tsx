@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { ArrowLeft, Lock, Swords } from 'lucide-react';
+import { ArrowLeft, Lock, Plus, Swords } from 'lucide-react';
+import { useAreas } from '@/features/areas/hooks/use-areas';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import {
@@ -11,6 +12,13 @@ import {
   getWeighInStatusLabel,
 } from '@/features/athletes/types/athlete';
 import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
+import { FightFormDialog } from '@/features/fights/components/fight-form-dialog';
+import { useCreateFight } from '@/features/fights/hooks/use-fights';
+import {
+  getFightRoundLabel,
+  getFightStatusLabel,
+  resolveFightWinnerName,
+} from '@/features/fights/types/fight';
 import { KeyGroupBuilder } from '@/features/key-groups/components/key-group-builder';
 import {
   useGenerateKeyGroupFights,
@@ -51,6 +59,7 @@ export default function KeyGroupDetailPage({
   keyGroupId,
 }: KeyGroupDetailPageProps) {
   const [athleteToRemove, setAthleteToRemove] = useState<Athlete | null>(null);
+  const [isFightFormOpen, setIsFightFormOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [categoryDraft, setCategoryDraft] = useState('');
   const [athletesDraft, setAthletesDraft] = useState<Athlete[]>([]);
@@ -61,6 +70,7 @@ export default function KeyGroupDetailPage({
   const keyGroupQuery = useKeyGroup(activeCompetitionId, keyGroupId);
   const allGroupsQuery = useKeyGroups(activeCompetitionId);
   const categoriesQuery = useCategories(activeCompetitionId);
+  const areasQuery = useAreas(activeCompetitionId);
   const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const updateMutation = useUpdateKeyGroup(activeCompetitionId, keyGroupId);
   const generateMutation = useGenerateKeyGroupFights(
@@ -68,6 +78,7 @@ export default function KeyGroupDetailPage({
     keyGroupId,
   );
   const lockMutation = useLockKeyGroup(activeCompetitionId, keyGroupId);
+  const createFightMutation = useCreateFight(activeCompetitionId);
   const { toast } = useToast();
   const maxGroupSize = competitionQuery.data?.maxGroupSize ?? 4;
 
@@ -147,6 +158,7 @@ export default function KeyGroupDetailPage({
       totalGroups: resolvedGroups.length,
       incompleteGroups,
       groupsWithoutFights,
+      groupsWithFights: resolvedGroups.filter((group) => group.fights.length > 0).length,
       canAdvanceToDistribution:
         resolvedGroups.length > 0 &&
         incompleteGroups === 0 &&
@@ -205,6 +217,28 @@ export default function KeyGroupDetailPage({
     isCompetitionReadinessLoading,
     isLocked,
   ]);
+  const fightsGroupedByRound = useMemo(() => {
+    const grouped = new Map<number, typeof fights>();
+
+    fights.forEach((fight) => {
+      const round = fight.round ?? 0;
+      const current = grouped.get(round) ?? [];
+      current.push(fight);
+      grouped.set(round, current);
+    });
+
+    return Array.from(grouped.entries())
+      .sort(([roundA], [roundB]) => roundA - roundB)
+      .map(([round, items]) => ({
+        round,
+        label: getFightRoundLabel(round || null),
+        fights: [...items].sort((fightA, fightB) => {
+          const orderA = fightA.order ?? Number.MAX_SAFE_INTEGER;
+          const orderB = fightB.order ?? Number.MAX_SAFE_INTEGER;
+          return orderA - orderB;
+        }),
+      }));
+  }, [fights]);
 
   async function handleSaveKeyGroup() {
     if (!keyGroup) {
@@ -233,6 +267,15 @@ export default function KeyGroupDetailPage({
   }
 
   async function handleAddAthlete(athlete: Athlete) {
+    if (athlete.weighInStatus !== 'APPROVED') {
+      toast({
+        title: 'Pesagem inválida para chave',
+        description: `${athlete.name} está com pesagem ${athlete.weighInStatus === 'PENDING' ? 'pendente' : 'reprovada'} e não pode ser adicionado.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const membership = athleteGroupMap.get(athlete.id);
     if (membership && membership.groupId !== keyGroupId) {
       toast({
@@ -375,6 +418,27 @@ export default function KeyGroupDetailPage({
     }
   }
 
+  async function handleCreateManualFight(
+    payload: Parameters<typeof createFightMutation.mutateAsync>[0],
+  ) {
+    try {
+      await createFightMutation.mutateAsync(payload);
+      setIsFightFormOpen(false);
+      toast({
+        title: 'Luta criada',
+        description: 'A luta manual foi vinculada a esta chave.',
+        variant: 'success',
+      });
+    } catch (error) {
+      toast({
+        title: 'Falha ao criar luta',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -440,6 +504,9 @@ export default function KeyGroupDetailPage({
                 <p className="mt-3 max-w-3xl text-slate-600">
                   Ajuste os atletas da chave, gere os confrontos todos contra
                   todos e trave quando a montagem estiver pronta. A distribuição de área agora é decidida no backend.
+                </p>
+                <p className="mt-2 max-w-3xl text-sm text-slate-700">
+                  A chave pode existir antes do fim da pesagem global, mas só atletas com pesagem aprovada podem ser incluídos.
                 </p>
                 <p className="mt-2 max-w-3xl text-sm font-medium text-slate-700">
                   {keyGroupStatus.description}
@@ -535,11 +602,11 @@ export default function KeyGroupDetailPage({
                     Chave pronta para a próxima etapa
                   </h2>
                   <p className="text-sm text-emerald-900">
-                    Esta chave já foi travada. O próximo passo útil é abrir as áreas e validar a fila resultante; a distribuição incremental já acontece na geração das lutas.
+                    Esta chave já foi travada. Você pode revisar a distribuição global ou seguir para a operação das áreas, conforme o estado atual das filas.
                   </p>
                 </div>
-                <Link href="/areas">
-                  <Button className="w-full lg:w-auto">Abrir áreas</Button>
+                <Link href="/areas/distribution">
+                  <Button className="w-full lg:w-auto">Revisar distribuição</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -590,11 +657,18 @@ export default function KeyGroupDetailPage({
                     Esta chave já foi travada, mas a competição ainda tem {competitionKeyGroupsReadiness?.incompleteGroups ?? 0} chave(s) incompleta(s) e {competitionKeyGroupsReadiness?.groupsWithoutFights ?? 0} sem lutas geradas.
                   </p>
                 </div>
-                <Link href="/key-groups">
-                  <Button variant="outline" className="w-full lg:w-auto">
-                    Voltar para chaves
-                  </Button>
-                </Link>
+                <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row">
+                  {competitionKeyGroupsReadiness?.groupsWithFights ? (
+                    <Link href="/areas/distribution">
+                      <Button className="w-full lg:w-auto">Distribuir o que já está pronto</Button>
+                    </Link>
+                  ) : null}
+                  <Link href="/key-groups">
+                    <Button variant="outline" className="w-full lg:w-auto">
+                      Voltar para chaves
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           ) : fights.length > 0 ? (
@@ -602,17 +676,22 @@ export default function KeyGroupDetailPage({
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
                   <h2 className="text-lg font-black tracking-tight text-slate-950">
-                    Continue revisando as chaves
+                    Chave já pode entrar no fluxo de distribuição
                   </h2>
                   <p className="text-sm text-slate-700">
-                    As lutas desta chave já foram geradas e enviadas para distribuição incremental no backend. Volte para a listagem e siga a revisão das demais chaves.
+                    As lutas desta chave já foram geradas e enviadas para distribuição incremental no backend. Você pode revisar a distribuição agora, mesmo antes das demais chaves terminarem.
                   </p>
                 </div>
-                <Link href="/key-groups">
-                  <Button variant="outline" className="w-full lg:w-auto">
-                    Voltar para chaves
-                  </Button>
-                </Link>
+                <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row">
+                  <Link href="/areas/distribution">
+                    <Button className="w-full lg:w-auto">Revisar distribuição</Button>
+                  </Link>
+                  <Link href="/key-groups">
+                    <Button variant="outline" className="w-full lg:w-auto">
+                      Voltar para chaves
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           ) : null}
@@ -739,43 +818,99 @@ export default function KeyGroupDetailPage({
           />
 
           <Card className="overflow-hidden border-4 border-slate-900 p-0">
-            <div className="border-b-4 border-slate-900 bg-slate-100 px-5 py-4 text-sm font-black uppercase tracking-[0.18em] text-slate-600">
-              Lutas geradas
+            <div className="flex items-center justify-between gap-3 border-b-4 border-slate-900 bg-slate-100 px-5 py-4">
+              <div className="text-sm font-black uppercase tracking-[0.18em] text-slate-600">
+                Lutas da chave
+              </div>
+              <Button
+                type="button"
+                onClick={() => setIsFightFormOpen(true)}
+                disabled={!categoryDraft || athletesDraft.length === 0}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Criar luta manual
+              </Button>
             </div>
             {fights.length === 0 ? (
               <CardContent className="p-6 text-slate-500">
                 Nenhuma luta gerada ainda para esta chave.
               </CardContent>
             ) : (
-              <div className="overflow-x-auto">
-                <Table className="rounded-none border-0">
-                  <TableHeader className="bg-white">
-                    <TableRow className="hover:bg-white">
-                      <TableHead>Luta</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Área</TableHead>
-                      <TableHead>Categoria</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {fights.map((fight) => (
-                      <TableRow key={fight.id}>
-                        <TableCell className="font-medium">
-                          {fight.athleteA?.name || 'A definir'} vs{' '}
-                          {fight.athleteB?.name || 'A definir'}
-                        </TableCell>
-                        <TableCell>{fight.status}</TableCell>
-                        <TableCell>{fight.areaName || '-'}</TableCell>
-                        <TableCell>{fight.categoryName || '-'}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="space-y-5 p-5">
+                {fightsGroupedByRound.map((group) => (
+                  <div key={group.label} className="overflow-hidden rounded-3xl border-2 border-slate-200">
+                    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                      <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-600">
+                        {group.label}
+                      </p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <Table className="rounded-none border-0">
+                        <TableHeader className="bg-white">
+                          <TableRow className="hover:bg-white">
+                            <TableHead>Ordem</TableHead>
+                            <TableHead>Luta</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Área</TableHead>
+                            <TableHead>Próxima</TableHead>
+                            <TableHead>Vencedor</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.fights.map((fight) => (
+                            <TableRow key={fight.id}>
+                              <TableCell className="font-semibold">
+                                {fight.order ?? '-'}
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div>
+                                  <p>
+                                    {fight.athleteA?.name || 'A definir'} vs{' '}
+                                    {fight.athleteB?.name || 'A definir'}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {fight.athleteA?.academy || 'Sem academia'} ·{' '}
+                                    {fight.athleteB?.academy || 'Sem academia'}
+                                  </p>
+                                </div>
+                              </TableCell>
+                              <TableCell>{getFightStatusLabel(fight.status)}</TableCell>
+                              <TableCell>{fight.areaName || '-'}</TableCell>
+                              <TableCell>
+                                {fight.nextFightId
+                                  ? `${fight.nextFightId} (${fight.nextFightSlot || '-'})`
+                                  : 'Final / campeão'}
+                              </TableCell>
+                              <TableCell>{resolveFightWinnerName(fight)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </Card>
         </>
       ) : null}
+
+      <FightFormDialog
+        isOpen={isFightFormOpen}
+        onClose={() => setIsFightFormOpen(false)}
+        onSubmit={(payload) => void handleCreateManualFight(payload)}
+        athletes={athletesDraft}
+        categories={(categoriesQuery.data ?? []).filter(
+          (category) => category.id === categoryDraft,
+        )}
+        areas={(areasQuery.data ?? []).map((area) => ({
+          id: area.id,
+          name: area.name,
+        }))}
+        defaultCategoryId={categoryDraft || null}
+        defaultKeyGroupId={keyGroupId}
+        isSubmitting={createFightMutation.isPending}
+      />
 
       <AlertDialog
         open={Boolean(athleteToRemove)}
