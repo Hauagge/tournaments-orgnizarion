@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { areaQueueQueryKey, areasQueryKey } from '@/features/areas/hooks/use-areas';
 import {
   addAthleteToKeyGroup,
+  createKeyGroupFight,
   createKeyGroup,
   generateKeyGroupFights,
   getKeyGroup,
@@ -122,6 +123,27 @@ export function useLockKeyGroup(competitionId: string | null, keyGroupId: string
       queryClient.invalidateQueries({
         queryKey: [...keyGroupsQueryKey, competitionId, keyGroupId],
       });
+    },
+  });
+}
+
+export function useCreateKeyGroupFight(
+  competitionId: string | null,
+  keyGroupId: string,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { athleteAId: number; athleteBId: number }) =>
+      createKeyGroupFight(keyGroupId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...keyGroupsQueryKey, competitionId] });
+      queryClient.invalidateQueries({
+        queryKey: [...keyGroupsQueryKey, competitionId, keyGroupId],
+      });
+      queryClient.invalidateQueries({ queryKey: ['fights', competitionId] });
+      queryClient.invalidateQueries({ queryKey: [...areasQueryKey, competitionId] });
+      queryClient.invalidateQueries({ queryKey: areaQueueQueryKey });
     },
   });
 }
