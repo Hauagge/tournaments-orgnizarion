@@ -2,22 +2,50 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { Clock3, Play, Trophy } from 'lucide-react';
+import {
+  Clock3,
+  Filter,
+  GripVertical,
+  Pencil,
+  Play,
+  Plus,
+  RotateCcw,
+  Search,
+  Save,
+  Trophy,
+} from 'lucide-react';
 import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-readiness';
 import { useAthletes } from '@/features/athletes/hooks/use-athletes';
+import { useAreas } from '@/features/areas/hooks/use-areas';
 import { useAuthStore } from '@/features/auth/stores/useAuthStore';
+import { useCategories } from '@/features/categories/hooks/use-categories';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import { getCompetitionEntry } from '@/features/competitions/lib/competition-flow';
+import { FightFormDialog } from '@/features/fights/components/fight-form-dialog';
 import { FightScoreboardDialog } from '@/features/fights/components/fight-scoreboard-dialog';
+import { FightsByAreaPdfButton } from '@/features/fights/components/fights-by-area-pdf-button';
 import {
+  buildFightOrderItems,
+  canPersistFightOrder,
+  moveFightBeforeVisibleTarget,
+  moveFightToEndOfVisibleList,
+  sortFightsByOrder,
+} from '@/features/fights/lib/reorder-fights';
+import {
+  useCreateFight,
   useFinishFight,
   useFights,
   useStartFight,
+  useUpdateFight,
+  useUpdateFightOrder,
 } from '@/features/fights/hooks/use-fights';
 import {
   Fight,
+  FightStatus,
+  getFightRoundLabel,
   getFightStatusBadgeClassName,
   getFightStatusLabel,
+  resolveFightWinnerName,
 } from '@/features/fights/types/fight';
 import { getWeighInStatusLabel } from '@/features/athletes/types/athlete';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
@@ -42,8 +70,6 @@ import {
 import { useToast } from '@/shared/ui/use-toast';
 import { useCompetitionSocket } from '@/hooks/useCompetitionSocket';
 import { clearAreaScoreboardState } from '@/features/fights/lib/scoreboard-sync';
-
-const POLLING_INTERVAL = 4000;
 
 const winTypeOptions = [
   'POINTS',
@@ -82,9 +108,15 @@ function getCompactFightStatusBadgeClassName(status: Fight['status']) {
 }
 
 export default function FightsTab() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | FightStatus>('ALL');
+  const [roundFilter, setRoundFilter] = useState('ALL');
   const [areaFilter, setAreaFilter] = useState('ALL');
   const [selectedFightId, setSelectedFightId] = useState<string | null>(null);
   const [finishFightId, setFinishFightId] = useState<string | null>(null);
+  const [fightFormMode, setFightFormMode] = useState<'create' | 'edit'>('create');
+  const [fightFormFightId, setFightFormFightId] = useState<string | null>(null);
   const [finishPreset, setFinishPreset] = useState<{
     fightId: string;
     winnerId: string;
@@ -96,6 +128,10 @@ export default function FightsTab() {
   const [winType, setWinType] =
     useState<(typeof winTypeOptions)[number]>('POINTS');
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
+  const [draftOrderedFights, setDraftOrderedFights] = useState<Fight[]>([]);
+  const [hasPendingOrderChanges, setHasPendingOrderChanges] = useState(false);
+  const [draggedFightId, setDraggedFightId] = useState<string | null>(null);
+  const [dragOverFightId, setDragOverFightId] = useState<string | null>(null);
 
   const activeCompetitionId = useCompetitionStore(
     (state) => state.activeCompetitionId,
@@ -104,43 +140,46 @@ export default function FightsTab() {
   const token = useAuthStore((state) => state.token);
   const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const athletesQuery = useAthletes(activeCompetitionId, '');
-  const realtime = useCompetitionSocket({
+  const areasQuery = useAreas(activeCompetitionId);
+  const categoriesQuery = useCategories(activeCompetitionId);
+  useCompetitionSocket({
     token,
     competitionId: activeCompetitionId,
   });
-  const isRealtimeActive =
-    realtime.connected && !realtime.joining && !realtime.joinError;
-  const fightsQuery = useFights(activeCompetitionId, {
-    refetchInterval: (query) =>
-      isRealtimeActive
-        ? false
-        : Array.isArray(query.state.data) &&
-            query.state.data.some(
-              (fight) =>
-                typeof fight === 'object' &&
-                fight !== null &&
-                'status' in fight &&
-                (fight.status === 'IN_PROGRESS' || fight.status === 'SCHEDULED'),
-            )
-          ? POLLING_INTERVAL
-          : false,
-  });
+  const fightsQuery = useFights(activeCompetitionId);
+  const createFightMutation = useCreateFight(activeCompetitionId);
   const startMutation = useStartFight(activeCompetitionId);
   const finishMutation = useFinishFight(activeCompetitionId);
+  const updateFightMutation = useUpdateFight(activeCompetitionId);
+  const updateFightOrderMutation = useUpdateFightOrder(activeCompetitionId);
   const { toast } = useToast();
 
-  const fights = useMemo(() => fightsQuery.data ?? [], [fightsQuery.data]);
+  const fights = useMemo(
+    () => sortFightsByOrder(fightsQuery.data ?? []),
+    [fightsQuery.data],
+  );
+  useEffect(() => {
+    if (!hasPendingOrderChanges) {
+      setDraftOrderedFights(fights);
+    }
+  }, [fights, hasPendingOrderChanges]);
+
+  const orderedFights = hasPendingOrderChanges ? draftOrderedFights : fights;
   const selectedFight = useMemo(
-    () => fights.find((fight) => fight.id === selectedFightId) ?? null,
-    [fights, selectedFightId],
+    () => orderedFights.find((fight) => fight.id === selectedFightId) ?? null,
+    [orderedFights, selectedFightId],
   );
   const fightToFinish = useMemo(
-    () => fights.find((fight) => fight.id === finishFightId) ?? null,
-    [fights, finishFightId],
+    () => orderedFights.find((fight) => fight.id === finishFightId) ?? null,
+    [orderedFights, finishFightId],
   );
   const scoreboardFight = useMemo(
-    () => fights.find((fight) => fight.id === scoreboardFightId) ?? null,
-    [fights, scoreboardFightId],
+    () => orderedFights.find((fight) => fight.id === scoreboardFightId) ?? null,
+    [orderedFights, scoreboardFightId],
+  );
+  const editingFight = useMemo(
+    () => orderedFights.find((fight) => fight.id === fightFormFightId) ?? null,
+    [fightFormFightId, orderedFights],
   );
 
   useEffect(() => {
@@ -175,9 +214,14 @@ export default function FightsTab() {
   const areaOptions = useMemo(() => {
     const uniqueAreas = new Map<string, string>();
 
-    fights.forEach((fight) => {
-      if (fight.areaName) {
-        uniqueAreas.set(fight.areaId ?? fight.areaName, fight.areaName);
+    (areasQuery.data ?? []).forEach((area) => {
+      uniqueAreas.set(area.id, area.name);
+    });
+
+    orderedFights.forEach((fight) => {
+      const key = fight.areaId ?? fight.areaName;
+      if (key && fight.areaName) {
+        uniqueAreas.set(key, fight.areaName);
       }
     });
 
@@ -185,35 +229,101 @@ export default function FightsTab() {
       value,
       label,
     }));
-  }, [fights]);
+  }, [areasQuery.data, orderedFights]);
 
-  const areaFilteredFights = useMemo(() => {
-    return fights.filter((fight) => {
+  const categoryOptions = useMemo(() => {
+    const uniqueCategories = new Map<string, string>();
+
+    (categoriesQuery.data ?? []).forEach((category) => {
+      uniqueCategories.set(category.id, category.name);
+    });
+
+    orderedFights.forEach((fight) => {
+      const key = fight.categoryId ?? fight.categoryName;
+      if (key && fight.categoryName) {
+        uniqueCategories.set(key, fight.categoryName);
+      }
+    });
+
+    return Array.from(uniqueCategories.entries()).map(([value, label]) => ({
+      value,
+      label,
+    }));
+  }, [categoriesQuery.data, orderedFights]);
+
+  const roundOptions = useMemo(() => {
+    return Array.from(
+      new Set(
+        orderedFights
+          .map((fight) => fight.round)
+          .filter((round): round is number => typeof round === 'number'),
+      ),
+    ).sort((roundA, roundB) => roundA - roundB);
+  }, [orderedFights]);
+
+  const filteredFights = useMemo(() => {
+    return orderedFights.filter((fight) => {
       const fightAreaKey = fight.areaId ?? fight.areaName;
       const matchesArea = areaFilter === 'ALL' || fightAreaKey === areaFilter;
+      const fightCategoryKey = fight.categoryId ?? fight.categoryName;
+      const matchesCategory =
+        categoryFilter === 'ALL' || fightCategoryKey === categoryFilter;
+      const matchesStatus =
+        statusFilter === 'ALL' || fight.status === statusFilter;
+      const matchesRound =
+        roundFilter === 'ALL' || String(fight.round ?? '') === roundFilter;
+      const normalizedSearch = searchTerm.trim().toLocaleLowerCase('pt-BR');
+      const haystack = [
+        fight.athleteA?.name,
+        fight.athleteB?.name,
+        fight.winner?.name,
+        fight.categoryName,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('pt-BR');
+      const matchesSearch =
+        normalizedSearch.length === 0 || haystack.includes(normalizedSearch);
 
-      return matchesArea;
+      return (
+        matchesArea &&
+        matchesCategory &&
+        matchesStatus &&
+        matchesRound &&
+        matchesSearch
+      );
     });
-  }, [areaFilter, fights]);
+  }, [
+    areaFilter,
+    categoryFilter,
+    orderedFights,
+    roundFilter,
+    searchTerm,
+    statusFilter,
+  ]);
+
+  const visibleFightIds = useMemo(
+    () => filteredFights.map((fight) => fight.id),
+    [filteredFights],
+  );
 
   const inProgressFights = useMemo(
-    () => areaFilteredFights.filter((fight) => fight.status === 'IN_PROGRESS'),
-    [areaFilteredFights],
+    () => filteredFights.filter((fight) => fight.status === 'IN_PROGRESS'),
+    [filteredFights],
   );
 
   const upcomingFights = useMemo(() => {
-    return areaFilteredFights
-      .filter((fight) => fight.status === 'SCHEDULED')
-      .sort((fightA, fightB) => {
-        const orderA = fightA.order ?? Number.MAX_SAFE_INTEGER;
-        const orderB = fightB.order ?? Number.MAX_SAFE_INTEGER;
-        return orderA - orderB;
-      });
-  }, [areaFilteredFights]);
+    return filteredFights.filter((fight) => fight.status === 'PENDING');
+  }, [filteredFights]);
   const unassignedFights = useMemo(
-    () => fights.filter((fight) => !fight.areaId),
-    [fights],
+    () => orderedFights.filter((fight) => !fight.areaId),
+    [orderedFights],
   );
+  const canSaveFightOrder =
+    hasPendingOrderChanges &&
+    orderedFights.length > 0 &&
+    canPersistFightOrder(orderedFights) &&
+    !updateFightOrderMutation.isPending;
   const readiness = athletesQuery.data
     ? buildAthleteReadinessSummary(athletesQuery.data)
     : null;
@@ -221,7 +331,7 @@ export default function FightsTab() {
     ? getCompetitionEntry(competitionQuery.data.mode, readiness)
     : null;
   const contextualNextStep = useMemo(() => {
-    if (fights.length === 0) {
+    if (orderedFights.length === 0) {
       if (!flowEntry) {
         return {
           href: null,
@@ -252,7 +362,7 @@ export default function FightsTab() {
     }
 
     return null;
-  }, [fights.length, flowEntry, unassignedFights.length]);
+  }, [flowEntry, orderedFights.length, unassignedFights.length]);
 
   async function handleStartFight(fightId: string) {
     try {
@@ -274,8 +384,65 @@ export default function FightsTab() {
     }
   }
 
+  async function handleSubmitFightForm(
+    payload: Parameters<typeof createFightMutation.mutateAsync>[0],
+  ) {
+    try {
+      if (fightFormMode === 'edit' && editingFight) {
+        await updateFightMutation.mutateAsync({
+          fightId: editingFight.id,
+          payload,
+        });
+        toast({
+          title: 'Luta atualizada',
+          description: 'Os dados da luta foram salvos com sucesso.',
+          variant: 'success',
+        });
+      } else {
+        await createFightMutation.mutateAsync(payload);
+        toast({
+          title: 'Luta criada',
+          description: 'A luta manual foi adicionada à chave.',
+          variant: 'success',
+        });
+      }
+
+      setFightFormFightId(null);
+    } catch (error) {
+      toast({
+        title: 'Falha ao salvar luta',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
   async function handleFinishFight() {
     if (!fightToFinish || !winnerId) {
+      return;
+    }
+
+    const hasSingleAthlete =
+      Boolean(fightToFinish.athleteA) !== Boolean(fightToFinish.athleteB);
+    if (hasSingleAthlete && winType !== 'WO') {
+      toast({
+        title: 'Resultado inválido',
+        description:
+          'Lutas com apenas um atleta só podem ser finalizadas como W.O.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    const allowOverride =
+      fightToFinish.status === 'FINISHED'
+        ? window.confirm(
+            'Esta luta já está finalizada. Confirma a troca de vencedor e a atualização da progressão da chave?',
+          )
+        : false;
+
+    if (fightToFinish.status === 'FINISHED' && !allowOverride) {
       return;
     }
 
@@ -283,7 +450,7 @@ export default function FightsTab() {
       const finishedFightAreaId = fightToFinish.areaId;
       await finishMutation.mutateAsync({
         fightId: fightToFinish.id,
-        payload: { winnerId, winType },
+        payload: { winnerId, winType, allowOverride },
       });
       if (finishedFightAreaId) {
         clearAreaScoreboardState(finishedFightAreaId);
@@ -315,6 +482,106 @@ export default function FightsTab() {
     setFinishFightId(fightId);
   }
 
+  function handleDragStartFight(fightId: string) {
+    if (updateFightOrderMutation.isPending) {
+      return;
+    }
+
+    setDraggedFightId(fightId);
+    setDragOverFightId(fightId);
+  }
+
+  function handleDragEnterFight(targetFightId: string) {
+    if (!draggedFightId || draggedFightId === targetFightId) {
+      return;
+    }
+
+    setDragOverFightId(targetFightId);
+  }
+
+  function handleDragEndFight() {
+    setDraggedFightId(null);
+    setDragOverFightId(null);
+  }
+
+  function handleDropFight(targetFightId: string) {
+    if (!draggedFightId || updateFightOrderMutation.isPending) {
+      handleDragEndFight();
+      return;
+    }
+
+    const nextOrder = moveFightBeforeVisibleTarget(
+      orderedFights,
+      visibleFightIds,
+      draggedFightId,
+      targetFightId,
+    );
+
+    if (nextOrder !== orderedFights) {
+      setDraftOrderedFights(nextOrder);
+      setHasPendingOrderChanges(true);
+    }
+
+    handleDragEndFight();
+  }
+
+  function handleDropAtEnd() {
+    if (!draggedFightId || updateFightOrderMutation.isPending) {
+      handleDragEndFight();
+      return;
+    }
+
+    const nextOrder = moveFightToEndOfVisibleList(
+      orderedFights,
+      visibleFightIds,
+      draggedFightId,
+    );
+
+    if (nextOrder !== orderedFights) {
+      setDraftOrderedFights(nextOrder);
+      setHasPendingOrderChanges(true);
+    }
+
+    handleDragEndFight();
+  }
+
+  function handleResetFightOrder() {
+    setDraftOrderedFights(fights);
+    setHasPendingOrderChanges(false);
+    handleDragEndFight();
+  }
+
+  async function handleSaveFightOrder() {
+    if (!activeCompetitionId || !canSaveFightOrder) {
+      return;
+    }
+
+    const previousServerOrder = fights;
+
+    try {
+      await updateFightOrderMutation.mutateAsync({
+        items: buildFightOrderItems(orderedFights),
+      });
+      setHasPendingOrderChanges(false);
+      toast({
+        title: 'Ordem atualizada',
+        description: 'A sequência das lutas foi salva com sucesso.',
+        variant: 'success',
+      });
+    } catch (error) {
+      setDraftOrderedFights(previousServerOrder);
+      setHasPendingOrderChanges(false);
+      toast({
+        title: 'Falha ao atualizar ordem',
+        description:
+          error instanceof Error && error.message.trim().length > 0
+            ? error.message
+            : 'Não foi possível atualizar a ordem das lutas. Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <header className="rounded-[28px] border-4 border-slate-900 bg-white p-6 shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
@@ -332,19 +599,25 @@ export default function FightsTab() {
             </p>
           </div>
 
-          <div className="rounded-2xl border-4 border-slate-900 bg-amber-100 px-5 py-3 text-right">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-              Agora
-            </p>
-            <p className="mt-1 text-2xl font-black text-slate-950">
-              {currentTime
-                ? currentTime.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  })
-                : '--:--:--'}
-            </p>
+          <div className="flex flex-col gap-3 lg:items-end">
+            <FightsByAreaPdfButton
+              competitionId={activeCompetitionId}
+              disabled={!hasHydrated}
+            />
+            <div className="rounded-2xl border-4 border-slate-900 bg-amber-100 px-5 py-3 text-right">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                Agora
+              </p>
+              <p className="mt-1 text-2xl font-black text-slate-950">
+                {currentTime
+                  ? currentTime.toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })
+                  : '--:--:--'}
+              </p>
+            </div>
           </div>
         </div>
       </header>
@@ -361,47 +634,176 @@ export default function FightsTab() {
       {activeCompetitionId && (
         <>
           <Card className="border-4 border-slate-900 p-0">
-            <CardContent className="grid gap-4 p-5 lg:grid-cols-[1.2fr_repeat(4,minmax(0,0.55fr))]">
-              <label className="block space-y-2">
-                <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                  <Clock3 className="h-4 w-4" />
-                  Área
-                </span>
-                <select
-                  value={areaFilter}
-                  onChange={(event) => setAreaFilter(event.target.value)}
-                  className="h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="ALL">Todas</option>
-                  {areaOptions.map((area) => (
-                    <option key={area.value} value={area.value}>
-                      {area.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+            <CardContent className="space-y-4 p-5">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.7fr))_auto]">
+                <label className="block space-y-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    <Search className="h-4 w-4" />
+                    Pesquisar por atleta ou categoria
+                  </span>
+                  <input
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Ex.: João, Adulto Leve"
+                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                  />
+                </label>
 
-              <MetricTile
-                label="Em andamento"
-                value={String(inProgressFights.length)}
-                tone="live"
-              />
-              <MetricTile
-                label="Próximas"
-                value={String(upcomingFights.length)}
-                tone="upcoming"
-              />
-              <MetricTile
-                label="Sem área"
-                value={String(unassignedFights.length)}
-                tone={unassignedFights.length > 0 ? 'warning' : 'default'}
-              />
-              <MetricTile
-                label="Total"
-                value={String(areaFilteredFights.length)}
-              />
+                <label className="block space-y-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    <Filter className="h-4 w-4" />
+                    Categoria
+                  </span>
+                  <select
+                    value={categoryFilter}
+                    onChange={(event) => setCategoryFilter(event.target.value)}
+                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                  >
+                    <option value="ALL">Todas</option>
+                    {categoryOptions.map((category) => (
+                      <option key={category.value} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    <Clock3 className="h-4 w-4" />
+                    Status
+                  </span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(event.target.value as 'ALL' | FightStatus)
+                    }
+                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                  >
+                    <option value="ALL">Todos</option>
+                    <option value="PENDING">Pendente</option>
+                    <option value="IN_PROGRESS">Em andamento</option>
+                    <option value="FINISHED">Finalizada</option>
+                  </select>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    <Clock3 className="h-4 w-4" />
+                    Rodada
+                  </span>
+                  <select
+                    value={roundFilter}
+                    onChange={(event) => setRoundFilter(event.target.value)}
+                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                  >
+                    <option value="ALL">Todas</option>
+                    {roundOptions.map((round) => (
+                      <option key={round} value={String(round)}>
+                        {getFightRoundLabel(round)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block space-y-2">
+                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    <Clock3 className="h-4 w-4" />
+                    Área
+                  </span>
+                  <select
+                    value={areaFilter}
+                    onChange={(event) => setAreaFilter(event.target.value)}
+                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                  >
+                    <option value="ALL">Todas</option>
+                    {areaOptions.map((area) => (
+                      <option key={area.value} value={area.value}>
+                        {area.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="flex items-end">
+                  <Button
+                    type="button"
+                    className="h-11 w-full"
+                    onClick={() => {
+                      setFightFormMode('create');
+                      setFightFormFightId('NEW');
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Criar luta manual
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-4">
+                <MetricTile
+                  label="Em andamento"
+                  value={String(inProgressFights.length)}
+                  tone="live"
+                />
+                <MetricTile
+                  label="Pendentes"
+                  value={String(upcomingFights.length)}
+                  tone="upcoming"
+                />
+                <MetricTile
+                  label="Sem área"
+                  value={String(unassignedFights.length)}
+                  tone={unassignedFights.length > 0 ? 'warning' : 'default'}
+                />
+                <MetricTile
+                  label="Filtradas"
+                  value={String(filteredFights.length)}
+                />
+              </div>
             </CardContent>
           </Card>
+
+          {!fightsQuery.isLoading && !fightsQuery.isError && orderedFights.length > 0 && (
+            <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                    Ordenação manual
+                  </p>
+                  <p className="text-sm text-slate-700">
+                    Arraste as linhas na tabela para reordenar a sequência visível. Ao salvar, o front envia a lista completa com <code>fightId</code> e <code>orderIndex</code>.
+                  </p>
+                  {!canPersistFightOrder(orderedFights) ? (
+                    <p className="text-sm text-red-700">
+                      Esta listagem possui luta com identificador inválido para persistência da ordem.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleResetFightOrder}
+                    disabled={!hasPendingOrderChanges || updateFightOrderMutation.isPending}
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Desfazer
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => void handleSaveFightOrder()}
+                    disabled={!canSaveFightOrder}
+                    className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {updateFightOrderMutation.isPending ? 'Salvando ordem...' : 'Salvar ordem'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {contextualNextStep ? (
             <Card className="border-4 border-amber-300 bg-amber-50 p-0 shadow-[6px_6px_0_0_rgba(120,53,15,0.14)]">
@@ -462,7 +864,7 @@ export default function FightsTab() {
 
           {!fightsQuery.isLoading &&
             !fightsQuery.isError &&
-            fights.length === 0 && (
+            orderedFights.length === 0 && (
               <StateCard
                 message="Nenhuma luta encontrada para a competição ativa."
                 tone="empty"
@@ -471,17 +873,17 @@ export default function FightsTab() {
 
           {!fightsQuery.isLoading &&
             !fightsQuery.isError &&
-            fights.length > 0 &&
-            areaFilteredFights.length === 0 && (
+            orderedFights.length > 0 &&
+            filteredFights.length === 0 && (
               <StateCard
-                message="Nenhuma luta corresponde à área selecionada."
+                message="Nenhuma luta corresponde aos filtros selecionados."
                 tone="empty"
               />
             )}
 
           {!fightsQuery.isLoading &&
             !fightsQuery.isError &&
-            areaFilteredFights.length > 0 && (
+            filteredFights.length > 0 && (
               <>
                 <section className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -510,6 +912,10 @@ export default function FightsTab() {
                           onOpenScoreboard={(fightId) =>
                             setScoreboardFightId(fightId)
                           }
+                          onEdit={(fightId) => {
+                            setFightFormMode('edit');
+                            setFightFormFightId(fightId);
+                          }}
                         />
                       ))}
                     </div>
@@ -526,7 +932,7 @@ export default function FightsTab() {
 
                   {upcomingFights.length === 0 ? (
                     <StateCard
-                      message="Nenhuma luta agendada para a sequência atual."
+                      message="Nenhuma luta pendente para a sequência atual."
                       tone="empty"
                     />
                   ) : (
@@ -543,6 +949,10 @@ export default function FightsTab() {
                           onOpenScoreboard={(fightId) =>
                             setScoreboardFightId(fightId)
                           }
+                          onEdit={(fightId) => {
+                            setFightFormMode('edit');
+                            setFightFormFightId(fightId);
+                          }}
                         />
                       ))}
                     </div>
@@ -550,7 +960,7 @@ export default function FightsTab() {
                 </section>
 
                 <div className="grid gap-3 md:hidden">
-                  {areaFilteredFights.map((fight) => (
+                  {filteredFights.map((fight) => (
                     <Card
                       key={fight.id}
                       className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]"
@@ -605,6 +1015,10 @@ export default function FightsTab() {
                           onOpenScoreboard={(fightId) =>
                             setScoreboardFightId(fightId)
                           }
+                          onEdit={(fightId) => {
+                            setFightFormMode('edit');
+                            setFightFormFightId(fightId);
+                          }}
                         />
                       </CardContent>
                     </Card>
@@ -617,10 +1031,16 @@ export default function FightsTab() {
                       <TableHeader className="bg-slate-100">
                         <TableRow className="hover:bg-slate-100">
                           <TableHead className="text-xs sm:text-sm">
+                            Ordem
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
                             Luta
                           </TableHead>
                           <TableHead className="text-xs sm:text-sm">
                             Status
+                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm">
+                            Rodada
                           </TableHead>
                           <TableHead className="text-xs sm:text-sm">
                             Área
@@ -637,11 +1057,41 @@ export default function FightsTab() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {areaFilteredFights.map((fight) => (
+                        {filteredFights.map((fight) => (
                           <TableRow
                             key={fight.id}
-                            className="hover:bg-amber-50"
+                            draggable={!updateFightOrderMutation.isPending}
+                            onDragStart={(event) => {
+                              event.dataTransfer.effectAllowed = 'move';
+                              event.dataTransfer.setData('text/plain', fight.id);
+                              handleDragStartFight(fight.id);
+                            }}
+                            onDragEnter={() => handleDragEnterFight(fight.id)}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = 'move';
+                              handleDragEnterFight(fight.id);
+                            }}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              handleDropFight(fight.id);
+                            }}
+                            onDragEnd={handleDragEndFight}
+                            className={`hover:bg-amber-50 ${
+                              draggedFightId === fight.id
+                                ? 'opacity-45'
+                                : dragOverFightId === fight.id
+                                  ? 'border-t-4 border-sky-400 bg-sky-50'
+                                  : ''
+                            }`}
                           >
+                            <TableCell className="py-3">
+                              <FightOrderHandle
+                                order={fight.order}
+                                isDragging={draggedFightId === fight.id}
+                                isSaving={updateFightOrderMutation.isPending}
+                              />
+                            </TableCell>
                             <TableCell className="py-3">
                               <button
                                 type="button"
@@ -660,6 +1110,9 @@ export default function FightsTab() {
                               >
                                 {getFightStatusLabel(fight.status)}
                               </span>
+                            </TableCell>
+                            <TableCell className="py-3 text-xs sm:text-sm">
+                              {getFightRoundLabel(fight.round)}
                             </TableCell>
                             <TableCell className="py-3 text-xs sm:text-sm">
                               {fight.areaName || '-'}
@@ -682,10 +1135,36 @@ export default function FightsTab() {
                                 onOpenScoreboard={(fightId) =>
                                   setScoreboardFightId(fightId)
                                 }
+                                onEdit={(fightId) => {
+                                  setFightFormMode('edit');
+                                  setFightFormFightId(fightId);
+                                }}
                               />
                             </TableCell>
                           </TableRow>
                         ))}
+                        {draggedFightId ? (
+                          <TableRow
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              event.dataTransfer.dropEffect = 'move';
+                              setDragOverFightId('__END__');
+                            }}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              handleDropAtEnd();
+                            }}
+                            className={
+                              dragOverFightId === '__END__'
+                                ? 'bg-sky-50'
+                                : 'bg-slate-50'
+                            }
+                          >
+                            <TableCell colSpan={8} className="py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                              Solte aqui para mover ao final da lista visível
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
                       </TableBody>
                     </Table>
                   </div>
@@ -700,8 +1179,28 @@ export default function FightsTab() {
             onStart={handleStartFight}
             onFinish={(fightId) => setFinishFightId(fightId)}
             onOpenScoreboard={(fightId) => setScoreboardFightId(fightId)}
+            onEdit={(fightId) => {
+              setFightFormMode('edit');
+              setFightFormFightId(fightId);
+            }}
             isStarting={startMutation.isPending}
             isFinishing={finishMutation.isPending}
+          />
+
+          <FightFormDialog
+            isOpen={Boolean(fightFormFightId)}
+            onClose={() => setFightFormFightId(null)}
+            onSubmit={(payload) => void handleSubmitFightForm(payload)}
+            athletes={athletesQuery.data ?? []}
+            categories={categoriesQuery.data ?? []}
+            areas={(areasQuery.data ?? []).map((area) => ({
+              id: area.id,
+              name: area.name,
+            }))}
+            fight={fightFormMode === 'edit' ? editingFight : null}
+            isSubmitting={
+              createFightMutation.isPending || updateFightMutation.isPending
+            }
           />
 
           <FightScoreboardDialog
@@ -747,6 +1246,7 @@ function FightActions({
   onStart,
   onFinish,
   onOpenScoreboard,
+  onEdit,
 }: {
   fight: Fight;
   isStarting: boolean;
@@ -754,6 +1254,7 @@ function FightActions({
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
   onOpenScoreboard?: (fightId: string) => void;
+  onEdit?: (fightId: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
@@ -761,7 +1262,7 @@ function FightActions({
         type="button"
         variant="outline"
         onClick={() => void onStart(fight.id)}
-        disabled={fight.status !== 'SCHEDULED' || isStarting}
+        disabled={fight.status !== 'PENDING' || isStarting}
       >
         <Play className="mr-2 h-4 w-4" />
         Iniciar
@@ -783,6 +1284,40 @@ function FightActions({
           Placar
         </Button>
       ) : null}
+      {onEdit ? (
+        <Button type="button" variant="outline" onClick={() => onEdit(fight.id)}>
+          <Pencil className="mr-2 h-4 w-4" />
+          Editar
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+function FightOrderHandle({
+  order,
+  isDragging,
+  isSaving,
+}: {
+  order: number | null;
+  isDragging: boolean;
+  isSaving: boolean;
+}) {
+  return (
+    <div
+      className={`flex min-w-[112px] items-center gap-2 ${
+        isSaving ? 'cursor-not-allowed opacity-50' : 'cursor-grab'
+      } ${isDragging ? 'cursor-grabbing' : ''}`}
+    >
+      <div className="min-w-10 text-sm font-black text-slate-950">
+        {order ?? '--'}
+      </div>
+      <span
+        aria-hidden="true"
+        className="inline-flex rounded-lg border border-slate-300 bg-slate-50 p-1 text-slate-500"
+      >
+        <GripVertical className="h-4 w-4" />
+      </span>
     </div>
   );
 }
@@ -823,6 +1358,7 @@ function LiveFightCard({
   onStart,
   onFinish,
   onOpenScoreboard,
+  onEdit,
 }: {
   fight: Fight;
   isStarting: boolean;
@@ -831,6 +1367,7 @@ function LiveFightCard({
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
   onOpenScoreboard: (fightId: string) => void;
+  onEdit: (fightId: string) => void;
 }) {
   return (
     <Card className="overflow-hidden border-4 border-red-300 bg-gradient-to-br from-red-100 via-orange-50 to-white p-0 shadow-[6px_6px_0_0_rgba(127,29,29,0.18)]">
@@ -880,6 +1417,7 @@ function LiveFightCard({
           onStart={onStart}
           onFinish={onFinish}
           onOpenScoreboard={onOpenScoreboard}
+          onEdit={onEdit}
         />
       </CardContent>
     </Card>
@@ -894,6 +1432,7 @@ function UpcomingFightCard({
   onStart,
   onFinish,
   onOpenScoreboard,
+  onEdit,
 }: {
   fight: Fight;
   isStarting: boolean;
@@ -902,13 +1441,14 @@ function UpcomingFightCard({
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
   onOpenScoreboard: (fightId: string) => void;
+  onEdit: (fightId: string) => void;
 }) {
   return (
     <Card className="overflow-hidden border-4 border-slate-900 bg-white p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
       <CardContent className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-4">
           <span className="inline-flex rounded-full border-2 border-sky-900 bg-sky-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-sky-900">
-            Agendada
+            Pendente
           </span>
           <div className="text-right">
             <p className="text-lg font-black text-slate-950">
@@ -955,6 +1495,7 @@ function UpcomingFightCard({
           onStart={onStart}
           onFinish={onFinish}
           onOpenScoreboard={onOpenScoreboard}
+          onEdit={onEdit}
         />
       </CardContent>
     </Card>
@@ -1017,6 +1558,7 @@ function FightDetailDrawer({
   onStart,
   onFinish,
   onOpenScoreboard,
+  onEdit,
   isStarting,
   isFinishing,
 }: {
@@ -1026,6 +1568,7 @@ function FightDetailDrawer({
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
   onOpenScoreboard: (fightId: string) => void;
+  onEdit: (fightId: string) => void;
   isStarting: boolean;
   isFinishing: boolean;
 }) {
@@ -1069,8 +1612,16 @@ function FightDetailDrawer({
                     value={fight.categoryName || '-'}
                   />
                   <DetailItem
+                    label="Chave"
+                    value={fight.keyGroupName || (fight.keyGroupId ? `Chave ${fight.keyGroupId}` : '-')}
+                  />
+                  <DetailItem
                     label="Ordem"
                     value={fight.order ? String(fight.order) : '-'}
+                  />
+                  <DetailItem
+                    label="Rodada"
+                    value={getFightRoundLabel(fight.round)}
                   />
                   <DetailItem
                     label="Tipo de vitória"
@@ -1097,7 +1648,7 @@ function FightDetailDrawer({
                   />
                 </div>
               </>
-            ) : null}
+              ) : null}
           </div>
 
           {fight ? (
@@ -1106,7 +1657,7 @@ function FightDetailDrawer({
                 type="button"
                 variant="outline"
                 onClick={() => void onStart(fight.id)}
-                disabled={fight.status !== 'SCHEDULED' || isStarting}
+                disabled={fight.status !== 'PENDING' || isStarting}
               >
                 Iniciar
               </Button>
@@ -1126,6 +1677,13 @@ function FightDetailDrawer({
                   Placar
                 </Button>
               ) : null}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onEdit(fight.id)}
+              >
+                Editar
+              </Button>
             </DialogFooter>
           ) : null}
         </div>
@@ -1279,19 +1837,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 }
 
 function resolveWinnerName(fight: Fight) {
-  if (!fight.winnerId) {
-    return '-';
-  }
-
-  if (fight.athleteA?.id === fight.winnerId) {
-    return fight.athleteA.name;
-  }
-
-  if (fight.athleteB?.id === fight.winnerId) {
-    return fight.athleteB.name;
-  }
-
-  return fight.winnerId;
+  return resolveFightWinnerName(fight);
 }
 
 function StateCard({

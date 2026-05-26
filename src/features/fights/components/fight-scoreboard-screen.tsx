@@ -30,6 +30,9 @@ type FightScoreboardScreenProps = {
   onFinish?: (fightId: string) => void;
 };
 
+// TODO: Adicionar novas etapaas quando chave olimpica
+// ADicionar funcionalidade para  inicar lutar para iniciar a luta, e para finalizar a luta, com opção de escolher o vencedor por pontos ou finalização. Essa funcionalidade deve ser para os chamadores.
+// Implementar funcionalidade que conta as vitórias por academia,
 type ScoreKey = keyof PlayerScore;
 
 type ShortcutSpec = {
@@ -1085,10 +1088,10 @@ export function FightScoreboardScreen({
               </div>
             </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <Button
-            type="button"
-            className="h-12 text-base font-black"
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <Button
+                type="button"
+                className="h-12 text-base font-black"
                 onClick={toggleTimer}
                 disabled={scoreboard.remainingSeconds <= 0}
               >
@@ -1247,7 +1250,9 @@ function ScorePanel({
     side === 'A'
       ? 'bg-[radial-gradient(circle_at_top,#fecaca_0%,#dc2626_45%,#7f1d1d_100%)] text-white'
       : 'bg-[radial-gradient(circle_at_top,#dbeafe_0%,#2563eb_45%,#0f172a_100%)] text-white';
-  const shellClassName = publicMode ? 'px-6 py-7 2xl:px-8 2xl:py-8' : 'px-5 py-6';
+  const shellClassName = publicMode
+    ? 'px-6 py-7 2xl:px-8 2xl:py-8'
+    : 'px-5 py-6';
   const heroPaddingClassName = publicMode
     ? 'px-6 py-6 2xl:px-7 2xl:py-7'
     : 'px-5 py-5';
@@ -1264,7 +1269,9 @@ function ScorePanel({
     ? 'mt-3 text-8xl font-black leading-none xl:text-[7rem] 2xl:text-[8.5rem]'
     : 'mt-2 text-6xl font-black';
   const statsGridClassName = publicMode ? 'mt-5 gap-4' : 'mt-4 gap-3';
-  const statCardClassName = publicMode ? 'px-4 py-4 2xl:px-5 2xl:py-5' : 'px-3 py-3';
+  const statCardClassName = publicMode
+    ? 'px-4 py-4 2xl:px-5 2xl:py-5'
+    : 'px-3 py-3';
   const statLabelClassName = publicMode
     ? 'text-sm font-black uppercase tracking-[0.18em] text-white/70 xl:text-base'
     : 'text-[11px] font-black uppercase tracking-[0.16em] text-white/65';
@@ -1283,27 +1290,25 @@ function ScorePanel({
         <h3 className={athleteTitleClassName}>{name}</h3>
         <p className={academyClassName}>{academy}</p>
 
-        <div className={`rounded-[24px] border-4 border-white/60 bg-slate-950/35 text-center text-white backdrop-blur-sm ${scoreCardPaddingClassName}`}>
+        <div
+          className={`rounded-[24px] border-4 border-white/60 bg-slate-950/35 text-center text-white backdrop-blur-sm ${scoreCardPaddingClassName}`}
+        >
           <p className="text-xs font-black uppercase tracking-[0.18em] text-white/70">
             Pontos
           </p>
           <p className={totalPointsClassName}>{totalPoints(score)}</p>
           <div className={`grid grid-cols-2 text-left ${statsGridClassName}`}>
-            <div className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}>
-              <p className={statLabelClassName}>
-                Vantagem
-              </p>
-              <p className={statValueClassName}>
-                {score.advantage}
-              </p>
+            <div
+              className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}
+            >
+              <p className={statLabelClassName}>Vantagem</p>
+              <p className={statValueClassName}>{score.advantage}</p>
             </div>
-            <div className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}>
-              <p className={statLabelClassName}>
-                Punição
-              </p>
-              <p className={statValueClassName}>
-                {score.punishment}
-              </p>
+            <div
+              className={`rounded-2xl border border-white/25 bg-white/10 ${statCardClassName}`}
+            >
+              <p className={statLabelClassName}>Punição</p>
+              <p className={statValueClassName}>{score.punishment}</p>
             </div>
           </div>
         </div>
@@ -1315,7 +1320,8 @@ function ScorePanel({
             <article
               key={rule.key}
               className={`rounded-[24px] border-4 px-4 py-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] transition ${
-                lastScoreChange?.side === side && lastScoreChange.key === rule.key
+                lastScoreChange?.side === side &&
+                lastScoreChange.key === rule.key
                   ? 'border-amber-500 bg-amber-50'
                   : 'border-slate-900 bg-white'
               }`}
@@ -1344,10 +1350,14 @@ function ScorePanel({
                   lastScoreChange.key === rule.key ? (
                     <span
                       className={`min-w-10 text-center text-sm font-black ${
-                        lastScoreChange.delta > 0 ? 'text-emerald-700' : 'text-red-700'
+                        lastScoreChange.delta > 0
+                          ? 'text-emerald-700'
+                          : 'text-red-700'
                       }`}
                     >
-                      {lastScoreChange.delta > 0 ? `+${rule.points}` : `-${rule.points}`}
+                      {lastScoreChange.delta > 0
+                        ? `+${rule.points}`
+                        : `-${rule.points}`}
                     </span>
                   ) : (
                     <span className="min-w-10 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-400">
