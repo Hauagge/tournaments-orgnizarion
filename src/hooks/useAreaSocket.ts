@@ -138,6 +138,8 @@ export function useAreaSocket({
     const unsubscribeLiveEvents = onLiveEvents(socket, {
       'fight.started': (payload) => applyEvent('fight.started', payload),
       'fight.finished': (payload) => applyEvent('fight.finished', payload),
+      'fights.order.updated': (payload) =>
+        applyEvent('fights.order.updated', payload),
       'queue.updated': (payload) => applyEvent('queue.updated', payload),
       'nextfight.updated': (payload) => applyEvent('nextfight.updated', payload),
     });

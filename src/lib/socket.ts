@@ -1,10 +1,11 @@
 'use client';
 
-import { io, type Socket } from 'socket.io-client';
+import { io, type ManagerOptions, type Socket, type SocketOptions } from 'socket.io-client';
 
 export const LIVE_EVENT_NAMES = [
   'fight.started',
   'fight.finished',
+  'fights.order.updated',
   'queue.updated',
   'nextfight.updated',
 ] as const;
@@ -72,13 +73,33 @@ function getSocketUrl() {
     throw new Error('NEXT_PUBLIC_FIGHT_UPDATES_WS_URL não está configurada.');
   }
 
-  return url;
+  return url.replace(/\/+$/, '');
+}
+
+function getSocketPath() {
+  const configuredPath = process.env.NEXT_PUBLIC_FIGHT_UPDATES_WS_PATH?.trim();
+
+  if (!configuredPath) {
+    return '/socket.io';
+  }
+
+  const normalizedPath = configuredPath.startsWith('/')
+    ? configuredPath
+    : `/${configuredPath}`;
+
+  return normalizedPath.replace(/\/+$/, '');
 }
 
 function createSocket(token: string) {
-  return io(getSocketUrl(), {
+  const options: Partial<ManagerOptions & SocketOptions> = {
     autoConnect: false,
     auth: { token },
+    path: getSocketPath(),
+    transports: ['websocket'],
+  };
+
+  return io(getSocketUrl(), {
+    ...options,
   });
 }
 

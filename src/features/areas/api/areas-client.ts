@@ -7,6 +7,16 @@ import {
   normalizeAreasResponse,
 } from '@/features/areas/types/area';
 
+export type DistributeFightsFullPayload = {
+  restGapFights: number;
+  ageSplitYears: number;
+};
+
+export type DistributeFightsIncrementalPayload = {
+  restGapFights: number;
+  fightIds: number[];
+};
+
 export function listAreas(competitionId: string) {
   return apiFetch<AreasApiResponse>(`/competitions/${competitionId}/areas`, {
     method: 'GET',
@@ -30,9 +40,31 @@ export function createAreas(
   });
 }
 
-export function distributeAreaFights(competitionId: string) {
+export function distributeFightsFull(
+  competitionId: string,
+  payload: DistributeFightsFullPayload,
+) {
   return apiFetch<unknown>(`/competitions/${competitionId}/areas/distribute`, {
     method: 'POST',
+    body: JSON.stringify({
+      mode: 'FULL',
+      restGapFights: payload.restGapFights,
+      ageSplitYears: payload.ageSplitYears,
+    }),
+  });
+}
+
+export function distributeFightsIncremental(
+  competitionId: string,
+  payload: DistributeFightsIncrementalPayload,
+) {
+  return apiFetch<unknown>(`/competitions/${competitionId}/areas/distribute`, {
+    method: 'POST',
+    body: JSON.stringify({
+      mode: 'INCREMENTAL',
+      restGapFights: payload.restGapFights,
+      fightIds: payload.fightIds,
+    }),
   });
 }
 
