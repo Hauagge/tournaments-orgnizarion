@@ -60,12 +60,14 @@ export default function CompetitionStartPage({
     competition.mode === 'ABSOLUTE_GP'
       ? [
           'Carregar atletas',
+          'Configurar áreas',
           'Concluir pesagem',
           'Gerar categorias',
           'Montar lutas e revisar distribuição/áreas',
         ]
       : [
           'Carregar atletas',
+          'Configurar áreas',
           'Concluir pesagem',
           'Montar chaves',
           'Gerar lutas por chave e revisar áreas',

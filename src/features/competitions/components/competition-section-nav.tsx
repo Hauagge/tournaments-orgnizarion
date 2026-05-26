@@ -48,12 +48,18 @@ export function CompetitionSectionNav() {
       <nav className="flex min-w-max gap-2">
         {sectionItems.map((item) => {
           const isActive = isSectionActive(pathname, item.href);
+          const blockedTitle =
+            item.href === '/key-groups'
+              ? 'Disponível depois que existir pelo menos um atleta na competição. Atletas com pesagem pendente podem coexistir, mas só atletas aprovados entram na chave.'
+              : item.href === '/areas/distribution'
+              ? 'Disponível depois que a competição já tiver base mínima de atletas. A tela passa a fazer sentido quando a primeira chave ou categoria gerar lutas.'
+              : 'Disponível depois que a base de atletas e a pesagem mínima estiverem prontas.';
 
           if (item.blocked) {
             return (
               <span
                 key={item.href}
-                title="Disponível depois que a base de atletas e a pesagem mínima estiverem prontas."
+                title={blockedTitle}
                 className="inline-flex cursor-not-allowed items-center rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black uppercase tracking-[0.12em] text-slate-400"
               >
                 {item.label}
