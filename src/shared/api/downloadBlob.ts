@@ -1,4 +1,5 @@
 import { ApiError } from '@/shared/api/fetch-client';
+import { AUTH_TOKEN_STORAGE_KEY } from '@/features/auth/stores/useAuthStore';
 
 function getBaseUrl() {
   const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -23,6 +24,15 @@ function extractFilename(contentDisposition: string | null) {
   return null;
 }
 
+function getAuthToken() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  return token && token.trim().length > 0 ? token : null;
+}
+
 async function parseErrorPayload(response: Response) {
   const contentType = response.headers.get('content-type') ?? '';
 
@@ -37,14 +47,22 @@ async function parseErrorPayload(response: Response) {
 export async function downloadBlob(
   path: string,
   init?: RequestInit,
-  options?: { defaultFilename?: string },
+  options?: {
+    defaultFilename?: string;
+    disposition?: 'download' | 'open';
+  },
 ) {
   const url = `${getBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+  const token = getAuthToken();
+  const headers = new Headers(init?.headers);
+
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
   const response = await fetch(url, {
     ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -90,15 +108,34 @@ export async function downloadBlob(
     options?.defaultFilename ??
     'download.pdf';
   const blobUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
+  const disposition = options?.disposition ?? 'download';
 
-  anchor.href = blobUrl;
-  anchor.download = filename;
-  anchor.style.display = 'none';
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(blobUrl);
+  if (disposition === 'open') {
+    const openedWindow = window.open(blobUrl, '_blank', 'noopener,noreferrer');
+
+    if (!openedWindow) {
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      anchor.style.display = 'none';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+  } else {
+    const anchor = document.createElement('a');
+
+    anchor.href = blobUrl;
+    anchor.download = filename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(blobUrl);
+  }, 0);
 
   return { blob, filename };
 }
