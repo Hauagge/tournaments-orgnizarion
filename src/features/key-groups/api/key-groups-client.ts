@@ -54,6 +54,19 @@ export function generateKeyGroupFights(keyGroupId: string) {
   }).then((response) => normalizeKeyGroupDetail(response as KeyGroupApiResponse));
 }
 
+export function createKeyGroupFight(
+  keyGroupId: string,
+  payload: {
+    athleteAId: number;
+    athleteBId: number;
+  },
+) {
+  return apiFetch<unknown>(`/key-groups/${keyGroupId}/fights`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export function lockKeyGroup(keyGroupId: string) {
   return apiFetch<unknown>(`/key-groups/${keyGroupId}/lock`, {
     method: 'POST',
