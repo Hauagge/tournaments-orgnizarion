@@ -73,9 +73,12 @@ export function getCompetitionSectionItems(
 ) {
   const readinessStage = getCompetitionReadinessStage(readiness);
   const flowBlocked = readinessStage !== 'READY';
+  const canOpenKeyGroups = readinessStage !== 'ATHLETES';
+  const canOpenDistribution = readinessStage !== 'ATHLETES';
   const setupItems = [
     { href: '/athletes', label: 'Atletas', blocked: false },
     { href: '/imports/athletes', label: 'Importação', blocked: false },
+    { href: '/areas', label: 'Áreas', blocked: false },
     {
       href: '/weigh-in',
       label: 'Pesagem',
@@ -87,21 +90,19 @@ export function getCompetitionSectionItems(
     return [
       ...setupItems,
       { href: '/categories', label: 'Categorias', blocked: flowBlocked },
-      { href: '/fights', label: 'Lutas', blocked: flowBlocked },
+      { href: '/fights', label: 'Lutas', blocked: false },
       {
         href: '/areas/distribution',
         label: 'Distribuição',
-        blocked: flowBlocked,
+        blocked: !canOpenDistribution,
       },
-      { href: '/areas', label: 'Áreas', blocked: flowBlocked },
     ];
   }
 
   return [
     ...setupItems,
-    { href: '/key-groups', label: 'Chaves', blocked: flowBlocked },
-    { href: '/fights', label: 'Lutas', blocked: flowBlocked },
-    { href: '/areas/distribution', label: 'Distribuição', blocked: flowBlocked },
-    { href: '/areas', label: 'Áreas', blocked: flowBlocked },
+    { href: '/key-groups', label: 'Chaves', blocked: !canOpenKeyGroups },
+    { href: '/fights', label: 'Lutas', blocked: false },
+    { href: '/areas/distribution', label: 'Distribuição', blocked: !canOpenDistribution },
   ];
 }
