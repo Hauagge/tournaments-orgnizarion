@@ -1,14 +1,12 @@
 'use client';
 
-import type { KeyboardEvent, ReactNode } from 'react';
+import type { KeyboardEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
-  CalendarClock,
-  GitBranch,
-  Scale,
-  TimerReset,
+  Settings,
+  Workflow,
 } from 'lucide-react';
 import {
   Competition,
@@ -46,6 +44,9 @@ export function CompetitionCard({
     ? buildAthleteReadinessSummary(athletesQuery.data)
     : null;
   const entry = getCompetitionEntry(competition.mode, readiness);
+  const athleteCount = athletesQuery.data?.length ?? 0;
+  const status = isActive ? 'Em andamento' : fightsNotStarted(readiness) ? 'Configurando' : 'Encerrado';
+  const statusClassName = getStatusClassName(status);
 
   const handleOpenCompetition = () => {
     onSelect(competition.id);
@@ -71,53 +72,35 @@ export function CompetitionCard({
       tabIndex={0}
       onClick={handleOpenCompetition}
       onKeyDown={handleCardKeyDown}
-      className={`cursor-pointer border-slate-200 p-0 transition hover:-translate-y-0.5 hover:shadow-md ${isSelected ? 'ring-2 ring-blue-500' : isActive ? 'ring-2 ring-slate-300' : ''}`}
+      className={`cursor-pointer rounded-xl border border-slate-200/70 p-0 shadow-none transition hover:border-slate-300 ${isSelected ? 'ring-1 ring-blue-500' : isActive ? 'ring-1 ring-emerald-300' : ''}`}
     >
       <CardContent className="space-y-5 p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <p className="text-xs uppercase text-slate-500">
               {competitionModeLabels[competition.mode]}
             </p>
-            <h2 className="mt-2 text-2xl font-bold text-slate-950">
+            <h2 className="mt-2 text-2xl font-medium text-slate-950">
               {competition.name}
             </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              {athleteCount} atletas · {Math.max(1, Math.ceil(athleteCount / 12))} áreas · {competitionModeLabels[competition.mode]}
+            </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            {isSelected && (
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+            <span className={statusClassName}>{status}</span>
+            {isSelected ? (
+              <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700">
                 Selecionada
               </span>
-            )}
-            {isActive && (
-              <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
-                Ativa
-              </span>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-          <Metric
-            icon={<TimerReset className="h-4 w-4" />}
-            label="Duração da luta"
-            value={`${competition.fightDurationSeconds}s`}
-          />
-          <Metric
-            icon={<Scale className="h-4 w-4" />}
-            label="Margem da pesagem"
-            value={`${competition.weighInMarginGrams}g`}
-          />
-          <Metric
-            icon={<CalendarClock className="h-4 w-4" />}
-            label="Faixa etária"
-            value={`${competition.ageSplitYears} anos`}
-          />
-          <Metric
-            icon={<GitBranch className="h-4 w-4" />}
-            label="Modo"
-            value={competitionModeLabels[competition.mode]}
-          />
+        <div className="grid gap-3 text-sm text-slate-600 sm:grid-cols-3">
+          <Metric label="Duração" value={`${competition.fightDurationSeconds}s`} />
+          <Metric label="Pesagem" value={`${competition.weighInMarginGrams}g`} />
+          <Metric label="Idade" value={`${competition.ageSplitYears} anos`} />
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -152,7 +135,18 @@ export function CompetitionCard({
           >
             {athletesQuery.isLoading && !athletesQuery.data
               ? 'Carregando fluxo...'
-              : entry.label}
+              : 'Ver chaves'}
+            <Workflow className="ml-2 h-4 w-4" />
+          </Button>
+          <Button
+            variant={isActive ? 'secondary' : 'outline'}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSetActive(competition.id);
+              router.push(entry.href);
+            }}
+          >
+            {isActive ? 'Ativo' : 'Ativar'}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
           <RoleGuard deny={['DESK', 'PUBLIC']}>
@@ -162,7 +156,8 @@ export function CompetitionCard({
               onClick={(event) => event.stopPropagation()}
             >
               <Button className="w-full" variant="default">
-                Editar competição
+                Gerenciar
+                <Settings className="ml-2 h-4 w-4" />
               </Button>
             </Link>
           </RoleGuard>
@@ -173,21 +168,34 @@ export function CompetitionCard({
 }
 
 function Metric({
-  icon,
   label,
   value,
 }: {
-  icon: ReactNode;
   label: string;
   value: string;
 }) {
   return (
-    <div className="rounded-xl bg-slate-50 p-3">
-      <div className="flex items-center gap-2 text-slate-500">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <p className="mt-2 font-semibold text-slate-900">{value}</p>
+    <div className="rounded-lg border border-slate-200/70 bg-slate-50 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 font-medium text-slate-900">{value}</p>
     </div>
   );
+}
+
+function fightsNotStarted(readiness: ReturnType<typeof buildAthleteReadinessSummary> | null) {
+  return !readiness || readiness.totalAthletes === 0 || readiness.pendingWeighIn > 0;
+}
+
+function getStatusClassName(status: 'Em andamento' | 'Configurando' | 'Encerrado') {
+  const base = 'rounded-full border px-3 py-1 text-xs';
+
+  if (status === 'Em andamento') {
+    return `${base} border-emerald-200 bg-emerald-50 text-emerald-700`;
+  }
+
+  if (status === 'Configurando') {
+    return `${base} border-amber-200 bg-amber-50 text-amber-800`;
+  }
+
+  return `${base} border-slate-200 bg-slate-100 text-slate-600`;
 }
