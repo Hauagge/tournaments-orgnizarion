@@ -120,19 +120,27 @@ export default function AreasDistributionPage() {
 
   return (
     <div className="space-y-6">
-      <header className="rounded-[28px] border-4 border-slate-900 bg-white p-6 shadow-[8px_8px_0_0_rgba(15,23,42,0.95)]">
+      <header className="rounded-xl border border-slate-200/70 bg-white p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.24em] text-slate-500">
+            <p className="text-sm text-slate-500">
               Áreas / Distribuição
             </p>
-            <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
-              Controle a distribuição manual das lutas
+            <h1 className="mt-2 text-3xl font-medium tracking-tight text-slate-950">
+              Distribuição por áreas de luta
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              O backend agora decide a alocação. Use esta tela apenas para redistribuição total ou para anexar lutas novas às filas existentes.
+              Cada chave permanece na mesma área durante todo o campeonato.
             </p>
           </div>
+          <Button
+            type="button"
+            onClick={() => void handleFullDistribution()}
+            disabled={!canRunFullDistribution || !activeCompetitionId || !hasHydrated}
+          >
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Redistribuir automaticamente
+          </Button>
         </div>
       </header>
 
@@ -146,7 +154,7 @@ export default function AreasDistributionPage() {
       )}
 
       {activeCompetitionId && (
-        <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+        <Card className="rounded-xl border border-slate-200/70 p-0 shadow-none">
           <CardContent className="space-y-4 p-5">
             {fightsQuery.isLoading ? <InlineState message="Carregando lutas..." /> : null}
             {fightsQuery.isError ? (
@@ -181,10 +189,10 @@ export default function AreasDistributionPage() {
               </div>
             ) : null}
 
-            <Card className="border-2 border-slate-300 p-0 shadow-none">
+            <Card className="border border-slate-300 p-0 shadow-none">
               <CardContent className="grid gap-4 p-4 lg:grid-cols-[repeat(2,minmax(0,220px))_1fr]">
                 <label className="block space-y-2">
-                  <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  <span className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
                     Descanso mínimo
                   </span>
                   <Input
@@ -198,7 +206,7 @@ export default function AreasDistributionPage() {
                 </label>
 
                 <label className="block space-y-2">
-                  <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                  <span className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
                     Separação etária
                   </span>
                   <Input
@@ -212,7 +220,7 @@ export default function AreasDistributionPage() {
                 </label>
 
                 <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-                  <p className="font-semibold">Bloqueio operacional do backend</p>
+                  <p className="font-medium">Bloqueio operacional do backend</p>
                   <p className="mt-1">
                     A redistribuição total falha se existir qualquer luta em <code>CALLED</code> ou <code>IN_PROGRESS</code>. A incremental também falha se algum <code>fightId</code> enviado estiver nesses estados.
                   </p>
@@ -222,8 +230,8 @@ export default function AreasDistributionPage() {
 
             {!fightsQuery.isLoading && !fightsQuery.isError ? (
               fights.length === 0 ? (
-                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-                  <p className="font-semibold">
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                  <p className="font-medium">
                     Ainda não há lutas para distribuir.
                   </p>
                   <p className="mt-1">
@@ -299,8 +307,8 @@ export default function AreasDistributionPage() {
             ) : null}
 
             {canOpenAreaOperation ? (
-              <div className="rounded-2xl border-2 border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
-                <p className="font-semibold">Distribuição pronta para operação.</p>
+              <div className="rounded-2xl border border-sky-300 bg-sky-50 p-4 text-sm text-sky-950">
+                <p className="font-medium">Distribuição pronta para operação.</p>
                 <p className="mt-1">
                   Todas as lutas atuais já estão com área definida. O próximo passo útil é abrir as áreas e operar as chamadas.
                 </p>
@@ -313,26 +321,52 @@ export default function AreasDistributionPage() {
             ) : null}
 
             {!areasQuery.isLoading && !areasQuery.isError && areas.length > 0 && (
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="space-y-3">
                 {areas.map((area) => (
-                  <Link key={area.id} href={`/areas/${area.id}`}>
-                    <div className="rounded-2xl border-4 border-slate-900 bg-slate-50 p-4 transition hover:-translate-y-0.5 hover:bg-amber-50">
-                      <p className="text-lg font-black text-slate-950">{area.name}</p>
-                      <p className="mt-2 text-sm text-slate-600">Fila atual: {area.queueCount} luta(s)</p>
-                      <div className="mt-3 space-y-1 text-sm text-slate-500">
+                  <div
+                    key={area.id}
+                    className="grid gap-4 rounded-xl border border-slate-200/70 bg-white p-4 lg:grid-cols-[160px_1fr]"
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => event.preventDefault()}
+                  >
+                    <div>
+                      <Link
+                        href={`/areas/${area.id}`}
+                        className="inline-flex rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 font-medium text-blue-800"
+                      >
+                        {area.name}
+                      </Link>
+                      <p className="mt-2 text-sm text-slate-500">
+                        {area.queueCount} luta(s) na fila
+                      </p>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
                         {getAreaPreviewFights(area).length === 0 ? (
-                          <p>Nenhuma luta distribuída</p>
+                          <div className="rounded-xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-500">
+                            Nenhuma chave distribuída
+                          </div>
                         ) : (
                           getAreaPreviewFights(area).map((fight, index) => (
-                            <p key={`${fight.id}-${index}`}>
-                              {index + 1}. {formatFightLabel(fight)}
-                            </p>
+                            <FightAllocationCard
+                              key={`${fight.id}-${index}`}
+                              fight={fight}
+                              index={index}
+                            />
                           ))
                         )}
-                      </div>
                     </div>
-                  </Link>
+                  </div>
                 ))}
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+                  <span className="mr-4 inline-flex items-center gap-2">
+                    <span className="h-3 w-3 rounded border border-emerald-300 bg-emerald-50" />
+                    Luta em andamento
+                  </span>
+                  <span className="inline-flex items-center gap-2">
+                    <span className="h-3 w-3 rounded border border-slate-300 bg-white" />
+                    Aguardando chamada
+                  </span>
+                </div>
               </div>
             )}
           </CardContent>
@@ -378,7 +412,7 @@ function StateCard({
   const toneClassName = tone === 'warning' ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-slate-300 bg-white text-slate-600';
 
   return (
-    <Card className={`border-4 p-0 ${toneClassName}`}>
+    <Card className={`border p-0 ${toneClassName}`}>
       <CardContent className="p-6">{message}</CardContent>
     </Card>
   );
@@ -418,11 +452,11 @@ function ValidationMetric({
         : 'border-slate-300 bg-slate-50 text-slate-950';
 
   return (
-    <div className={`rounded-2xl border-2 p-4 ${className}`}>
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+    <div className={`rounded-2xl border p-4 ${className}`}>
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="mt-2 text-3xl font-medium">{value}</p>
     </div>
   );
 }
@@ -447,13 +481,13 @@ function ActionCard({
   onClick: () => void;
 }) {
   return (
-    <div className="rounded-2xl border-2 border-slate-300 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-300 bg-slate-50 p-4">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 rounded-full border border-slate-300 bg-white p-2 text-slate-700">
           {icon}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+          <p className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
             {title}
           </p>
           <p className="mt-2 text-sm text-slate-700">{description}</p>
@@ -467,7 +501,7 @@ function ActionCard({
       <Button
         onClick={onClick}
         disabled={disabled}
-        className="mt-4 h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800"
+        className="mt-4 h-12 rounded-2xl border border-slate-900 bg-slate-900 px-5 text-sm font-medium uppercase tracking-[0.12em] hover:bg-slate-800"
       >
         {busy ? 'Processando...' : buttonLabel}
       </Button>
@@ -481,6 +515,53 @@ function formatFightLabel(fight: { athleteA?: { name?: string } | null; athleteB
   }
 
   return `${fight.athleteA?.name || 'A definir'} vs ${fight.athleteB?.name || 'A definir'}`;
+}
+
+function FightAllocationCard({
+  fight,
+  index,
+}: {
+  fight: {
+    id?: string;
+    status?: string;
+    keyGroupName?: string;
+    categoryName?: string;
+    round?: number | null;
+    order?: number | null;
+    athleteA?: { name?: string } | null;
+    athleteB?: { name?: string } | null;
+  };
+  index: number;
+}) {
+  const isRunning = fight.status === 'IN_PROGRESS';
+  const athleteCount = [fight.athleteA, fight.athleteB].filter(Boolean).length;
+
+  return (
+    <div
+      draggable
+      className={`min-w-[240px] rounded-xl border p-4 ${
+        isRunning
+          ? 'border-emerald-300 bg-emerald-50'
+          : 'border-slate-200 bg-slate-50'
+      }`}
+    >
+      <p className="font-medium text-slate-950">
+        {fight.keyGroupName || fight.categoryName || `Chave ${index + 1}`}
+      </p>
+      <p className="mt-2 text-sm text-slate-600">{formatFightLabel(fight)}</p>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-slate-500">
+        <span>{athleteCount} atletas</span>
+        <span>{resolveFormatLabel(fight.round)}</span>
+        <span>{fight.order ? `${fight.order} lutas` : '1 fase'}</span>
+      </div>
+    </div>
+  );
+}
+
+function resolveFormatLabel(round?: number | null) {
+  if (round === 1) return 'Olímpico';
+  if (round === 2) return 'Melhor de 3';
+  return 'Round-robin';
 }
 
 function getAreaPreviewFights(area: {
