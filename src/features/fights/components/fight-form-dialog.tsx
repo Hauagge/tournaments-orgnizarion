@@ -254,7 +254,7 @@ export function FightFormDialog({
           <Button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || !form.categoryId || form.athleteAId === form.athleteBId}
+            disabled={isSubmitting  || form.athleteAId === form.athleteBId}
           >
             {isSubmitting ? 'Salvando...' : 'Salvar luta'}
           </Button>

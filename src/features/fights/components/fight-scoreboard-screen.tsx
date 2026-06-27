@@ -953,7 +953,7 @@ export function FightScoreboardScreen({
   }
 
   return (
-    <div className="relative grid h-screen w-screen overflow-hidden lg:grid-cols-[1fr_30rem_1fr] 2xl:grid-cols-[1fr_34rem_1fr]">
+    <div className="relative flex h-screen w-screen flex-col overflow-hidden xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(20rem,28rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(22rem,32rem)_minmax(0,1fr)]">
       <ScorePanel
         side="A"
         name={displayFight?.athleteAName || 'Atleta A'}
@@ -965,12 +965,12 @@ export function FightScoreboardScreen({
         lastScoreChange={lastScoreChange}
       />
 
-      <section className="border-y-4 border-slate-900 bg-slate-950 px-5 py-6 text-white lg:border-x-4 lg:border-y-0">
+      <section className="order-first overflow-y-auto border-b-4 border-slate-900 bg-slate-950 px-4 py-5 text-white sm:px-5 sm:py-6 xl:order-none xl:border-x-4 xl:border-y-0">
         <div className="text-center">
           <div className="inline-flex rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-slate-300">
             {isPublicMode ? 'Modo Público' : 'Modo Operador'}
           </div>
-          <h1 className="mt-4 text-2xl font-black uppercase tracking-[0.14em]">
+          <h1 className="mt-4 text-xl font-black uppercase tracking-[0.14em] sm:text-2xl">
             Placar da luta
           </h1>
           <p className="mt-2 text-sm text-slate-300">
@@ -979,11 +979,11 @@ export function FightScoreboardScreen({
           </p>
         </div>
 
-        <div className="mt-8 rounded-[28px] border-4 border-amber-300 bg-amber-50 px-4 py-6 text-center text-slate-950">
+        <div className="mt-6 rounded-[28px] border-4 border-amber-300 bg-amber-50 px-4 py-5 text-center text-slate-950 sm:mt-8 sm:py-6">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
             Tempo restante
           </p>
-          <p className="mt-3 font-mono text-6xl font-black tracking-tight sm:text-7xl">
+          <p className="mt-3 font-mono text-5xl font-black tracking-tight sm:text-6xl 2xl:text-7xl">
             {formatTime(scoreboard.remainingSeconds)}
           </p>
           <p className="mt-3 text-sm font-semibold text-slate-500">
@@ -1009,7 +1009,7 @@ export function FightScoreboardScreen({
                   Modo público
                 </Button>
               </div>
-              <div className="mt-3 grid grid-cols-4 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {durationOptionsInMinutes.map((minutes) => {
                   const isActive = scoreboard.durationSeconds === minutes * 60;
 
@@ -1077,7 +1077,7 @@ export function FightScoreboardScreen({
                   }
                 />
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-slate-300 lg:grid-cols-4">
                 {operatorActionShortcuts.map((shortcut) => (
                   <ShortcutLegend
                     key={shortcut.label}
@@ -1252,22 +1252,22 @@ function ScorePanel({
       : 'bg-[radial-gradient(circle_at_top,#dbeafe_0%,#2563eb_45%,#0f172a_100%)] text-white';
   const shellClassName = publicMode
     ? 'px-6 py-7 2xl:px-8 2xl:py-8'
-    : 'px-5 py-6';
+    : 'px-4 py-4 sm:px-5 sm:py-5';
   const heroPaddingClassName = publicMode
     ? 'px-6 py-6 2xl:px-7 2xl:py-7'
-    : 'px-5 py-5';
+    : 'px-4 py-4 sm:px-5 sm:py-5';
   const athleteTitleClassName = publicMode
     ? 'mt-3 text-4xl font-black leading-tight text-white xl:text-5xl 2xl:text-6xl'
-    : 'mt-2 text-3xl font-black text-white';
+    : 'mt-2 text-2xl font-black leading-tight text-white sm:text-3xl';
   const academyClassName = publicMode
     ? 'mt-3 text-lg font-semibold text-white/85 xl:text-xl'
     : 'mt-2 text-sm font-semibold text-white/80';
   const scoreCardPaddingClassName = publicMode
     ? 'mt-6 px-6 py-6 2xl:px-7 2xl:py-7'
-    : 'mt-5 px-5 py-4';
+    : 'mt-4 px-4 py-4 sm:mt-5 sm:px-5';
   const totalPointsClassName = publicMode
     ? 'mt-3 text-8xl font-black leading-none xl:text-[7rem] 2xl:text-[8.5rem]'
-    : 'mt-2 text-6xl font-black';
+    : 'mt-2 text-5xl font-black sm:text-6xl';
   const statsGridClassName = publicMode ? 'mt-5 gap-4' : 'mt-4 gap-3';
   const statCardClassName = publicMode
     ? 'px-4 py-4 2xl:px-5 2xl:py-5'
@@ -1280,7 +1280,7 @@ function ScorePanel({
     : 'mt-1 text-2xl font-black text-white';
 
   return (
-    <section className={`overflow-y-auto ${shellClassName} ${themeClassName}`}>
+    <section className={`min-h-0 overflow-y-auto ${shellClassName} ${themeClassName}`}>
       <div
         className={`rounded-[28px] border-4 border-slate-900 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] ${heroPaddingClassName} ${heroCardClassName}`}
       >
@@ -1315,7 +1315,7 @@ function ScorePanel({
       </div>
 
       {interactive ? (
-        <div className="mt-5 grid gap-4">
+        <div className="mt-4 grid gap-3 sm:mt-5 sm:gap-4">
           {pointRules.map((rule) => (
             <article
               key={rule.key}
@@ -1569,7 +1569,7 @@ function ShortcutPill({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border border-current/20 bg-white/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${className}`}
+      className={`inline-flex min-h-8 items-center justify-center rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-slate-950 shadow-[2px_2px_0_0_rgba(15,23,42,0.18)] ${className}`}
     >
       {label}
     </span>
@@ -1615,9 +1615,9 @@ function ShortcutLegend({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-700 bg-slate-900/80 px-3 py-2">
-      <p className="font-black text-white">{shortcut}</p>
-      <p className="mt-1 text-[11px] leading-4 text-slate-400">{description}</p>
+    <div className="rounded-2xl border-2 border-slate-900 bg-white px-3 py-2 shadow-[3px_3px_0_0_rgba(15,23,42,0.16)]">
+      <p className="text-base font-black text-slate-950">{shortcut}</p>
+      <p className="mt-1 text-xs leading-4 text-slate-700">{description}</p>
     </div>
   );
 }
