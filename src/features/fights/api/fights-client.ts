@@ -58,7 +58,7 @@ export function generateFights(competitionId: string) {
 }
 
 export function createFight(competitionId: string, payload: CreateFightPayload) {
-  return apiFetch<unknown>(`/competitions/${competitionId}/fights`, {
+  return apiFetch<unknown>(`/competitions/${competitionId}/fights/manual`, {
     method: 'POST',
     body: JSON.stringify(payload),
   }).then((response) => normalizeFight(response) as Fight);
