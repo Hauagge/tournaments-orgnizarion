@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { ArrowLeft, Lock, Plus, Swords } from 'lucide-react';
+import { ArrowLeft, Lock, Medal, Plus, Swords, Trophy } from 'lucide-react';
 import { useAreas } from '@/features/areas/hooks/use-areas';
 import { useCategories } from '@/features/categories/hooks/use-categories';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
@@ -15,9 +15,9 @@ import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-re
 import { FightFormDialog } from '@/features/fights/components/fight-form-dialog';
 import { useCreateFight } from '@/features/fights/hooks/use-fights';
 import {
+  Fight,
   getFightRoundLabel,
   getFightStatusLabel,
-  resolveFightWinnerName,
 } from '@/features/fights/types/fight';
 import { KeyGroupBuilder } from '@/features/key-groups/components/key-group-builder';
 import {
@@ -487,10 +487,10 @@ export default function KeyGroupDetailPage({
 
       {keyGroup ? (
         <>
-          <header className="rounded-3xl bg-white p-6 shadow-sm">
+          <header className="rounded-3xl bg-white p-6 shadow-none">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
                   Detalhe da chave
                 </p>
                 <div className="mt-3">
@@ -498,7 +498,7 @@ export default function KeyGroupDetailPage({
                     {keyGroupStatus.label}
                   </StatusBadge>
                 </div>
-                <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950">
+                <h1 className="mt-2 text-4xl font-medium tracking-tight text-slate-950">
                   {keyGroup.name}
                 </h1>
                 <p className="mt-3 max-w-3xl text-slate-600">
@@ -547,10 +547,10 @@ export default function KeyGroupDetailPage({
             </div>
           </header>
 
-          <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+          <Card className="border border-slate-900 p-0 shadow-none">
             <CardContent className="space-y-4 p-5">
               <div className="space-y-1">
-                <h2 className="text-xl font-black tracking-tight text-slate-950">
+                <h2 className="text-xl font-medium tracking-tight text-slate-950">
                   Prontidão da chave para gerar lutas
                 </h2>
                 <p className="text-sm text-slate-600">
@@ -582,11 +582,11 @@ export default function KeyGroupDetailPage({
 
               {athleteReadiness.approvedAthletes >= 2 &&
               athleteReadiness.pendingWeighIn === 0 ? (
-                <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
+                <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900">
                   A chave está pronta para gerar lutas: há atletas suficientes, nenhuma pesagem pendente e o backend cuidará da distribuição incremental após a geração.
                 </div>
               ) : (
-                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
                   Finalize a preparação da chave antes de gerar lutas. O sistema só libera esta etapa quando houver pelo menos 2 atletas aprovados e nenhuma pesagem pendente.
                 </div>
               )}
@@ -595,10 +595,10 @@ export default function KeyGroupDetailPage({
 
           {isLocked &&
           competitionKeyGroupsReadiness?.canAdvanceToDistribution ? (
-            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(5,150,105,0.2)]">
+            <Card className="border border-emerald-300 bg-emerald-50 p-0 shadow-none">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-emerald-950">
+                  <h2 className="text-lg font-medium tracking-tight text-emerald-950">
                     Chave pronta para a próxima etapa
                   </h2>
                   <p className="text-sm text-emerald-900">
@@ -611,10 +611,10 @@ export default function KeyGroupDetailPage({
               </CardContent>
             </Card>
           ) : isLocked && isCompetitionReadinessLoading ? (
-            <Card className="border-4 border-slate-300 bg-slate-50 p-0 shadow-[6px_6px_0_0_rgba(148,163,184,0.16)]">
+            <Card className="border border-slate-300 bg-slate-50 p-0 shadow-none">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-slate-950">
+                  <h2 className="text-lg font-medium tracking-tight text-slate-950">
                     Confirmando a prontidão da competição
                   </h2>
                   <p className="text-sm text-slate-700">
@@ -629,10 +629,10 @@ export default function KeyGroupDetailPage({
               </CardContent>
             </Card>
           ) : isLocked && hasCompetitionReadinessError ? (
-            <Card className="border-4 border-red-300 bg-red-50 p-0 shadow-[6px_6px_0_0_rgba(248,113,113,0.16)]">
+            <Card className="border border-red-300 bg-red-50 p-0 shadow-none">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-red-950">
+                  <h2 className="text-lg font-medium tracking-tight text-red-950">
                     Não foi possível confirmar o estado global
                   </h2>
                   <p className="text-sm text-red-900">
@@ -647,10 +647,10 @@ export default function KeyGroupDetailPage({
               </CardContent>
             </Card>
           ) : isLocked ? (
-            <Card className="border-4 border-amber-300 bg-amber-50 p-0 shadow-[6px_6px_0_0_rgba(245,158,11,0.18)]">
+            <Card className="border border-amber-300 bg-amber-50 p-0 shadow-none">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-amber-950">
+                  <h2 className="text-lg font-medium tracking-tight text-amber-950">
                     Continue revisando as outras chaves
                   </h2>
                   <p className="text-sm text-amber-900">
@@ -672,10 +672,10 @@ export default function KeyGroupDetailPage({
               </CardContent>
             </Card>
           ) : fights.length > 0 ? (
-            <Card className="border-4 border-slate-900 bg-slate-50 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.15)]">
+            <Card className="border border-slate-900 bg-slate-50 p-0 shadow-none">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
-                  <h2 className="text-lg font-black tracking-tight text-slate-950">
+                  <h2 className="text-lg font-medium tracking-tight text-slate-950">
                     Chave já pode entrar no fluxo de distribuição
                   </h2>
                   <p className="text-sm text-slate-700">
@@ -696,10 +696,10 @@ export default function KeyGroupDetailPage({
             </Card>
           ) : null}
 
-          <Card className="border-4 border-slate-900 p-0">
+          <Card className="border border-slate-900 p-0">
             <CardContent className="grid gap-4 p-5 lg:grid-cols-[1fr_280px_auto] lg:items-end">
               <label className="block space-y-2">
-                <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                <span className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
                   Nome da chave
                 </span>
                 <Input
@@ -710,14 +710,14 @@ export default function KeyGroupDetailPage({
               </label>
 
               <label className="block space-y-2">
-                <span className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
+                <span className="text-sm font-medium uppercase tracking-[0.16em] text-slate-500">
                   Categoria
                 </span>
                 <select
                   value={categoryDraft}
                   onChange={(event) => setCategoryDraft(event.target.value)}
                   disabled={isLocked}
-                  className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
+                  className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900 disabled:cursor-not-allowed disabled:bg-slate-100"
                 >
                   <option value="">Sem categoria</option>
                   {(categoriesQuery.data ?? []).map((category) => (
@@ -738,14 +738,14 @@ export default function KeyGroupDetailPage({
           </Card>
 
           {hasUnsavedChanges ? (
-            <Card className="border-4 border-amber-900 bg-amber-50 p-0">
-              <CardContent className="p-4 text-sm font-semibold text-amber-950">
+            <Card className="border border-amber-900 bg-amber-50 p-0">
+              <CardContent className="p-4 text-sm font-medium text-amber-950">
                 Existem alterações locais não salvas na chave.
               </CardContent>
             </Card>
           ) : null}
 
-          <Card className="overflow-hidden border-4 border-slate-900 p-0">
+          <Card className="overflow-hidden border border-slate-900 p-0">
             <div className="overflow-x-auto">
               <Table className="rounded-none border-0">
                 <TableHeader className="bg-slate-100">
@@ -817,15 +817,15 @@ export default function KeyGroupDetailPage({
             }}
           />
 
-          <Card className="overflow-hidden border-4 border-slate-900 p-0">
+          <Card className="overflow-hidden border border-slate-900 p-0">
             <div className="flex items-center justify-between gap-3 border-b-4 border-slate-900 bg-slate-100 px-5 py-4">
-              <div className="text-sm font-black uppercase tracking-[0.18em] text-slate-600">
-                Lutas da chave
+              <div className="text-sm font-medium text-slate-600">
+                Visualização da chave
               </div>
               <Button
                 type="button"
                 onClick={() => setIsFightFormOpen(true)}
-                disabled={!categoryDraft || athletesDraft.length === 0}
+                disabled={ athletesDraft.length === 0}
               >
                 <Plus className="mr-2 h-4 w-4" />
                 Criar luta manual
@@ -837,58 +837,14 @@ export default function KeyGroupDetailPage({
               </CardContent>
             ) : (
               <div className="space-y-5 p-5">
-                {fightsGroupedByRound.map((group) => (
-                  <div key={group.label} className="overflow-hidden rounded-3xl border-2 border-slate-200">
-                    <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-                      <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-600">
-                        {group.label}
-                      </p>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <Table className="rounded-none border-0">
-                        <TableHeader className="bg-white">
-                          <TableRow className="hover:bg-white">
-                            <TableHead>Ordem</TableHead>
-                            <TableHead>Luta</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Área</TableHead>
-                            <TableHead>Próxima</TableHead>
-                            <TableHead>Vencedor</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {group.fights.map((fight) => (
-                            <TableRow key={fight.id}>
-                              <TableCell className="font-semibold">
-                                {fight.order ?? '-'}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                <div>
-                                  <p>
-                                    {fight.athleteA?.name || 'A definir'} vs{' '}
-                                    {fight.athleteB?.name || 'A definir'}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {fight.athleteA?.academy || 'Sem academia'} ·{' '}
-                                    {fight.athleteB?.academy || 'Sem academia'}
-                                  </p>
-                                </div>
-                              </TableCell>
-                              <TableCell>{getFightStatusLabel(fight.status)}</TableCell>
-                              <TableCell>{fight.areaName || '-'}</TableCell>
-                              <TableCell>
-                                {fight.nextFightId
-                                  ? `${fight.nextFightId} (${fight.nextFightSlot || '-'})`
-                                  : 'Final / campeão'}
-                              </TableCell>
-                              <TableCell>{resolveFightWinnerName(fight)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                ))}
+                <BracketVisualization
+                  keyGroupName={keyGroup.name}
+                  categoryName={keyGroup.categoryName ?? categoryDraft}
+                  areaName={fights[0]?.areaName || 'Área a definir'}
+                  athletes={athletesDraft}
+                  fights={fights}
+                  rounds={fightsGroupedByRound}
+                />
               </div>
             )}
           </Card>
@@ -955,7 +911,7 @@ function StateCard({
         : 'border-slate-300 bg-white text-slate-600';
 
   return (
-    <Card className={`border-4 p-0 ${toneClassName}`}>
+    <Card className={`border p-0 ${toneClassName}`}>
       <CardContent className="p-6">{message}</CardContent>
     </Card>
   );
@@ -978,11 +934,11 @@ function ReadinessMetric({
         : 'border-slate-300 bg-slate-50 text-slate-950';
 
   return (
-    <div className={`rounded-2xl border-2 p-4 ${className}`}>
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+    <div className={`rounded-2xl border p-4 ${className}`}>
+      <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="mt-2 text-3xl font-medium">{value}</p>
     </div>
   );
 }
@@ -1003,21 +959,230 @@ function StatusBadge({
 
   return (
     <span
-      className={`inline-flex rounded-full border-2 px-3 py-1 text-xs font-black uppercase tracking-[0.16em] ${className}`}
+      className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.16em] ${className}`}
     >
       {children}
     </span>
   );
 }
 
+function BracketVisualization({
+  keyGroupName,
+  categoryName,
+  areaName,
+  athletes,
+  fights,
+  rounds,
+}: {
+  keyGroupName: string;
+  categoryName: string;
+  areaName: string;
+  athletes: Athlete[];
+  fights: Fight[];
+  rounds: Array<{ round: number; label: string; fights: Fight[] }>;
+}) {
+  const contextBadges = [categoryName || keyGroupName, athletes[0]?.belt || 'Faixa a definir', areaName];
+
+  if (athletes.length === 2) {
+    return (
+      <section className="space-y-4">
+        <BracketHeader badges={contextBadges} text="Vence quem ganhar 2 de 3 lutas" />
+        <div className="grid gap-3 lg:grid-cols-3">
+          {[0, 1, 2].map((index) => (
+            <FightCard
+              key={index}
+              title={`Luta ${index + 1}${index === 2 ? ' — decisiva' : ''}`}
+              fight={fights[index]}
+              disabled={index === 2 && !shouldShowDecisiveFight(fights)}
+            />
+          ))}
+        </div>
+        <InfoBanner tone="info">
+          A luta decisiva é liberada automaticamente quando o placar ficar 1x1.
+        </InfoBanner>
+      </section>
+    );
+  }
+
+  if (athletes.length === 3) {
+    return (
+      <section className="space-y-4">
+        <BracketHeader badges={contextBadges} text="Todos lutam contra todos — 3 confrontos" />
+        <div className="grid gap-3 lg:grid-cols-3">
+          {fights.slice(0, 3).map((fight, index) => (
+            <FightCard key={fight.id} title={`Confronto ${index + 1}`} fight={fight} />
+          ))}
+        </div>
+        <RoundRobinTable athletes={athletes} fights={fights} />
+        <InfoBanner tone="warning">
+          Em empate, aplicar o critério configurado nas regras: pontuação interna e vantagens.
+        </InfoBanner>
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-4">
+      <BracketHeader badges={contextBadges} text="Próximas fases geradas automaticamente" />
+      <div className="overflow-x-auto">
+        <div className="flex min-w-[760px] gap-5">
+          {rounds.map((round, roundIndex) => (
+            <div key={round.label} className="w-64 shrink-0 space-y-3">
+              <p className="font-medium text-slate-950">
+                {roundIndex === rounds.length - 1 ? 'Final' : round.label}
+              </p>
+              {round.fights.map((fight) => (
+                <div key={fight.id} className="relative">
+                  <FightCard
+                    title={`Luta ${fight.order ?? '-'}`}
+                    fight={fight}
+                    final={roundIndex === rounds.length - 1}
+                  />
+                  {roundIndex < rounds.length - 1 ? (
+                    <svg className="absolute -right-5 top-1/2 h-8 w-5 -translate-y-1/2 text-slate-300" viewBox="0 0 20 32" aria-hidden="true">
+                      <path d="M0 16H12C16 16 16 8 20 8M12 16C16 16 16 24 20 24" fill="none" stroke="currentColor" strokeWidth="1.5" />
+                    </svg>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+      <InfoBanner tone="success">
+        Novas lutas são geradas automaticamente ao confirmar cada resultado.
+      </InfoBanner>
+    </section>
+  );
+}
+
+function BracketHeader({ badges, text }: { badges: string[]; text: string }) {
+  return (
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-wrap gap-2">
+        {badges.map((badge) => (
+          <span key={badge} className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
+            {badge}
+          </span>
+        ))}
+      </div>
+      <p className="text-sm text-slate-600">{text}</p>
+    </div>
+  );
+}
+
+function FightCard({
+  title,
+  fight,
+  disabled = false,
+  final = false,
+}: {
+  title: string;
+  fight?: Fight;
+  disabled?: boolean;
+  final?: boolean;
+}) {
+  const winnerId = fight?.winnerId;
+
+  return (
+    <div className={`rounded-xl border p-4 ${final ? 'border-blue-400 border' : 'border-slate-200'} ${disabled ? 'bg-slate-50 opacity-60' : 'bg-white'}`}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="font-medium text-slate-950">{title}</p>
+        {final && winnerId ? <Trophy className="h-4 w-4 text-amber-500" /> : null}
+      </div>
+      <AthleteSlot name={fight?.athleteA?.name} active={winnerId === fight?.athleteA?.id} eliminated={Boolean(winnerId && winnerId !== fight?.athleteA?.id)} />
+      <AthleteSlot name={fight?.athleteB?.name} active={winnerId === fight?.athleteB?.id} eliminated={Boolean(winnerId && winnerId !== fight?.athleteB?.id)} />
+      <p className="mt-3 text-xs text-slate-500">
+        {fight ? getFightStatusLabel(fight.status) : disabled ? 'Aguardando empate 1x1' : 'A definir'}
+      </p>
+    </div>
+  );
+}
+
+function AthleteSlot({
+  name,
+  active,
+  eliminated,
+}: {
+  name?: string;
+  active: boolean;
+  eliminated: boolean;
+}) {
+  return (
+    <div className={`mt-2 rounded-lg border px-3 py-2 text-sm ${active ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : eliminated ? 'border-slate-200 bg-slate-50 text-slate-400 line-through' : 'border-slate-200 bg-white text-slate-700'}`}>
+      {active ? <Medal className="mr-2 inline h-4 w-4" /> : null}
+      {name || <span className="italic">A definir</span>}
+    </div>
+  );
+}
+
+function RoundRobinTable({ athletes, fights }: { athletes: Athlete[]; fights: Fight[] }) {
+  const rows = athletes.map((athlete) => {
+    const wins = fights.filter((fight) => fight.winnerId === athlete.id).length;
+    const losses = fights.filter((fight) => fight.loserId === athlete.id).length;
+    return { athlete, wins, losses, points: wins * 3 };
+  });
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200">
+      <Table className="rounded-none border-0">
+        <TableHeader className="bg-slate-50">
+          <TableRow className="hover:bg-slate-50">
+            <TableHead>Atleta</TableHead>
+            <TableHead>Vitórias</TableHead>
+            <TableHead>Derrotas</TableHead>
+            <TableHead>Pontos</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.athlete.id}>
+              <TableCell className="font-medium">{row.athlete.name}</TableCell>
+              <TableCell>{row.wins}</TableCell>
+              <TableCell>{row.losses}</TableCell>
+              <TableCell>{row.points}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function InfoBanner({
+  tone,
+  children,
+}: {
+  tone: 'info' | 'success' | 'warning';
+  children: ReactNode;
+}) {
+  const className =
+    tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : tone === 'warning'
+        ? 'border-amber-200 bg-amber-50 text-amber-900'
+        : 'border-blue-200 bg-blue-50 text-blue-800';
+
+  return <div className={`rounded-xl border p-4 text-sm ${className}`}>{children}</div>;
+}
+
+function shouldShowDecisiveFight(fights: Fight[]) {
+  const firstTwo = fights.slice(0, 2);
+  if (firstTwo.length < 2 || firstTwo.some((fight) => !fight.winnerId)) {
+    return false;
+  }
+
+  return firstTwo[0].winnerId !== firstTwo[1].winnerId;
+}
+
 function statusBadgeClassName(status: string) {
   if (status === 'APPROVED') {
-    return 'inline-flex rounded-full border-2 border-emerald-900 bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-emerald-900';
+    return 'inline-flex rounded-full border border-emerald-900 bg-emerald-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-emerald-900';
   }
 
   if (status === 'REJECTED') {
-    return 'inline-flex rounded-full border-2 border-red-900 bg-red-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-red-900';
+    return 'inline-flex rounded-full border border-red-900 bg-red-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-red-900';
   }
 
-  return 'inline-flex rounded-full border-2 border-amber-900 bg-amber-100 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-amber-900';
+  return 'inline-flex rounded-full border border-amber-900 bg-amber-100 px-3 py-1 text-xs font-medium uppercase tracking-[0.14em] text-amber-900';
 }

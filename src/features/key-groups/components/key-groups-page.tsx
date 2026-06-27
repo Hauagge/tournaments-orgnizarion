@@ -14,6 +14,7 @@ import {
 } from '@/features/key-groups/api/key-groups-client';
 import { useKeyGroups } from '@/features/key-groups/hooks/use-key-groups';
 import { KeyGroup } from '@/features/key-groups/types/key-group';
+import { ChampionAcademiesReport } from '@/features/reports/components/champion-academies-report';
 import ReportButtons from '@/features/reports/components/ReportButtons';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import AlertDialog, {
@@ -255,6 +256,7 @@ export default function KeyGroupsPage() {
       ) : null}
 
       <ReportButtons compact />
+      <ChampionAcademiesReport />
 
       {activeCompetitionId ? (
         <>
