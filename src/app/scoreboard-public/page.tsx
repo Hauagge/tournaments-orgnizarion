@@ -1,9 +1,22 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FightScoreboardScreen } from '@/features/fights/components/fight-scoreboard-screen';
 
 export default function FightScoreboardPublicPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="h-screen w-screen overflow-hidden bg-[#f7f1e8]" />
+      }
+    >
+      <ScoreboardPublicContent />
+    </Suspense>
+  );
+}
+
+function ScoreboardPublicContent() {
   const searchParams = useSearchParams();
   const areaId = searchParams.get('areaId');
 
