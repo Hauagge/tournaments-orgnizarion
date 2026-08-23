@@ -1,9 +1,7 @@
 import { apiFetch } from '@/shared/api/fetch-client';
 import {
-  KeyGroup,
   KeyGroupApiResponse,
   KeyGroupPayload,
-  normalizeKeyGroup,
   normalizeKeyGroupDetail,
   normalizeKeyGroupsResponse,
 } from '@/features/key-groups/types/key-group';

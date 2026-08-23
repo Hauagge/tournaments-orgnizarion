@@ -19,6 +19,10 @@ import {
   getFightRoundLabel,
   getFightStatusLabel,
 } from '@/features/fights/types/fight';
+import {
+  getEliminationPhaseLabel,
+  getFightAdvanceState,
+} from '@/features/key-groups/lib/elimination-bracket';
 import { KeyGroupBuilder } from '@/features/key-groups/components/key-group-builder';
 import {
   useGenerateKeyGroupFights,
@@ -1023,36 +1027,156 @@ function BracketVisualization({
 
   return (
     <section className="space-y-4">
-      <BracketHeader badges={contextBadges} text="Próximas fases geradas automaticamente" />
+      <BracketHeader badges={contextBadges} text="Eliminatórias · vencedor avança para a próxima fase" />
       <div className="overflow-x-auto">
-        <div className="flex min-w-[760px] gap-5">
+        <div className="flex min-w-[860px] items-stretch gap-6 pb-2">
           {rounds.map((round, roundIndex) => (
-            <div key={round.label} className="w-64 shrink-0 space-y-3">
-              <p className="font-medium text-slate-950">
-                {roundIndex === rounds.length - 1 ? 'Final' : round.label}
-              </p>
-              {round.fights.map((fight) => (
-                <div key={fight.id} className="relative">
-                  <FightCard
-                    title={`Luta ${fight.order ?? '-'}`}
-                    fight={fight}
-                    final={roundIndex === rounds.length - 1}
-                  />
-                  {roundIndex < rounds.length - 1 ? (
-                    <svg className="absolute -right-5 top-1/2 h-8 w-5 -translate-y-1/2 text-slate-300" viewBox="0 0 20 32" aria-hidden="true">
-                      <path d="M0 16H12C16 16 16 8 20 8M12 16C16 16 16 24 20 24" fill="none" stroke="currentColor" strokeWidth="1.5" />
-                    </svg>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+            <EliminationPhaseColumn
+              key={`${round.round}-${round.label}`}
+              phaseLabel={getEliminationPhaseLabel(roundIndex, rounds.length)}
+              fights={round.fights}
+              isFinal={roundIndex === rounds.length - 1}
+              hasNextPhase={roundIndex < rounds.length - 1}
+            />
           ))}
         </div>
       </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <LegendItem tone="success" label="Vencedor" />
+        <LegendItem tone="muted" label="Eliminado" />
+        <LegendItem tone="pending" label="Aguardando definição" />
+      </div>
       <InfoBanner tone="success">
-        Novas lutas são geradas automaticamente ao confirmar cada resultado.
+        Nas eliminatórias, cada resultado confirmado alimenta a próxima fase da chave. A final recebe destaque e o campeão aparece com troféu.
       </InfoBanner>
     </section>
+  );
+}
+
+function EliminationPhaseColumn({
+  phaseLabel,
+  fights,
+  isFinal,
+  hasNextPhase,
+}: {
+  phaseLabel: string;
+  fights: Fight[];
+  isFinal: boolean;
+  hasNextPhase: boolean;
+}) {
+  return (
+    <div className="w-72 shrink-0">
+      <div className={`mb-3 rounded-xl border px-4 py-3 ${isFinal ? 'border-blue-300 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+        <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+          Fase
+        </p>
+        <p className="mt-1 text-lg font-medium text-slate-950">{phaseLabel}</p>
+      </div>
+      <div className="flex h-[calc(100%-68px)] flex-col justify-around gap-5">
+        {fights.map((fight) => (
+          <div key={fight.id} className="relative">
+            <EliminationFightCard fight={fight} final={isFinal} />
+            {hasNextPhase ? <BracketConnector /> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EliminationFightCard({
+  fight,
+  final,
+}: {
+  fight: Fight;
+  final: boolean;
+}) {
+  const winnerId = fight.winnerId;
+  const advanceState = getFightAdvanceState(fight);
+
+  return (
+    <article
+      className={`rounded-xl border bg-white p-4 ${
+        final ? 'border-blue-500 border-2' : 'border-slate-200'
+      }`}
+    >
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-slate-500">
+            Jogo {fight.order ?? fight.id}
+          </p>
+          <p className="mt-1 text-sm text-slate-600">
+            {getFightStatusLabel(fight.status)}
+          </p>
+        </div>
+        {final && winnerId ? (
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-700">
+            <Trophy className="h-4 w-4" />
+          </span>
+        ) : null}
+      </div>
+
+      <div className="space-y-2">
+        <AthleteSlot
+          name={fight.athleteA?.name}
+          active={winnerId === fight.athleteA?.id}
+          eliminated={Boolean(winnerId && winnerId !== fight.athleteA?.id)}
+        />
+        <AthleteSlot
+          name={fight.athleteB?.name}
+          active={winnerId === fight.athleteB?.id}
+          eliminated={Boolean(winnerId && winnerId !== fight.athleteB?.id)}
+        />
+      </div>
+
+      <div
+        className={`mt-3 rounded-lg border px-3 py-2 text-xs ${
+          advanceState.hasWinner
+            ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+            : 'border-slate-200 bg-slate-50 text-slate-500'
+        }`}
+      >
+        {advanceState.nextFightLabel}
+      </div>
+    </article>
+  );
+}
+
+function BracketConnector() {
+  return (
+    <svg
+      className="absolute -right-6 top-1/2 h-14 w-6 -translate-y-1/2 text-slate-300"
+      viewBox="0 0 24 56"
+      aria-hidden="true"
+    >
+      <path
+        d="M0 28H10C17 28 17 14 24 14M10 28C17 28 17 42 24 42"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function LegendItem({
+  tone,
+  label,
+}: {
+  tone: 'success' | 'muted' | 'pending';
+  label: string;
+}) {
+  const className =
+    tone === 'success'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+      : tone === 'muted'
+        ? 'border-slate-200 bg-slate-50 text-slate-500'
+        : 'border-blue-200 bg-blue-50 text-blue-800';
+
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-sm ${className}`}>
+      {label}
+    </div>
   );
 }
 

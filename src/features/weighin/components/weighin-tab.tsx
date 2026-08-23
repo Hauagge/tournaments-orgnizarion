@@ -83,7 +83,7 @@ export default function WeighInTab() {
     ? selectedWeightKg - selectedLimit
     : null;
 
-  function openDecisionModal(athlete: Athlete, action: ModalAction) {
+  function openDecisionModal(athlete: Athlete) {
     setSelectedAthlete(athlete);
     setRealWeightInput(
       athlete.realWeightGrams !== null
@@ -253,7 +253,7 @@ export default function WeighInTab() {
                               variant="outline"
                               className="px-2 text-emerald-700"
                               aria-label={`Aprovar ${athlete.name}`}
-                              onClick={() => openDecisionModal(athlete, 'APPROVED')}
+                              onClick={() => openDecisionModal(athlete)}
                             >
                               <Check className="h-4 w-4" />
                             </Button>
@@ -262,7 +262,7 @@ export default function WeighInTab() {
                               variant="outline"
                               className="px-2 text-red-700"
                               aria-label={`Reprovar ${athlete.name}`}
-                              onClick={() => openDecisionModal(athlete, 'REJECTED')}
+                              onClick={() => openDecisionModal(athlete)}
                             >
                               <X className="h-4 w-4" />
                             </Button>

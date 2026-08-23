@@ -126,9 +126,11 @@ type FightApiItem = {
   academyBName?: string | null;
   winnerId?: string | number | null;
   winnerAthleteId?: string | number | null;
+  winnerName?: string | null;
   winnerAthleteName?: string | null;
   loserId?: string | number | null;
   loserAthleteId?: string | number | null;
+  loserName?: string | null;
   loserAthleteName?: string | null;
   winType?: string | null;
   startedAt?: string | null;
@@ -147,6 +149,7 @@ type FightApiItem = {
   slot?: string | null;
   createdManually?: boolean | null;
   manual?: boolean | null;
+  isWo?: boolean | null;
   athleteA?: unknown;
   athleteB?: unknown;
   winner?: unknown;
@@ -356,14 +359,14 @@ export function normalizeFight(input: unknown): Fight {
     record,
     ['winner'],
     ['winnerId', 'winnerAthleteId'],
-    ['winnerAthleteName'],
+    ['winnerName', 'winnerAthleteName'],
     [],
   );
   const loserFallback = normalizeParticipant(
     record,
     ['loser'],
     ['loserId', 'loserAthleteId'],
-    ['loserAthleteName'],
+    ['loserName', 'loserAthleteName'],
     [],
   );
   const teamMatchId = readIdentifier(record, [

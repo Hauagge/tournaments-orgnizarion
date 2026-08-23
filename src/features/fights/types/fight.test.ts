@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeFightsResponse } from '@/features/fights/types/fight';
+import {
+  FightApiResponse,
+  normalizeFightsResponse,
+} from '@/features/fights/types/fight';
 
 describe('normalizeFightsResponse', () => {
   it('preserva os nomes dos atletas no formato atual do endpoint de lutas', () => {
-    const fights = normalizeFightsResponse({
+    const response: FightApiResponse = {
       data: [
         {
           id: 123,
@@ -14,7 +17,6 @@ describe('normalizeFightsResponse', () => {
           areaName: 'Área 2',
           status: 'WAITING',
           round: 1,
-          order: 5,
           athleteAId: 101,
           athleteAName: 'João Silva',
           academyAName: 'Alliance',
@@ -35,7 +37,8 @@ describe('normalizeFightsResponse', () => {
         },
       ],
       error: null,
-    } as any);
+    };
+    const fights = normalizeFightsResponse(response);
 
     expect(fights).toHaveLength(1);
     expect(fights[0]).toMatchObject({
