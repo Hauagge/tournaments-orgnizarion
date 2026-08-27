@@ -98,6 +98,8 @@ function getWinTypeLabel(winType: string) {
 
 function getCompactFightStatusBadgeClassName(status: Fight['status']) {
   switch (status) {
+    case 'CALLED':
+      return 'inline-flex rounded-full border border-violet-900 bg-violet-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-violet-900 sm:border-2 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.12em]';
     case 'IN_PROGRESS':
       return 'inline-flex rounded-full border border-blue-900 bg-blue-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-blue-900 sm:border-2 sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.12em]';
     case 'FINISHED':
@@ -313,7 +315,9 @@ export default function FightsTab() {
   );
 
   const upcomingFights = useMemo(() => {
-    return filteredFights.filter((fight) => fight.status === 'PENDING');
+    return filteredFights.filter(
+      (fight) => fight.status === 'PENDING' || fight.status === 'CALLED',
+    );
   }, [filteredFights]);
   const unassignedFights = useMemo(
     () => orderedFights.filter((fight) => !fight.areaId),
@@ -682,6 +686,7 @@ export default function FightsTab() {
                   >
                     <option value="ALL">Todos</option>
                     <option value="PENDING">Pendente</option>
+                    <option value="CALLED">Chamada</option>
                     <option value="IN_PROGRESS">Em andamento</option>
                     <option value="FINISHED">Finalizada</option>
                   </select>
@@ -1262,7 +1267,10 @@ function FightActions({
         type="button"
         variant="outline"
         onClick={() => void onStart(fight.id)}
-        disabled={fight.status !== 'PENDING' || isStarting}
+        disabled={
+          (fight.status !== 'PENDING' && fight.status !== 'CALLED') ||
+          isStarting
+        }
       >
         <Play className="mr-2 h-4 w-4" />
         Iniciar
@@ -1657,7 +1665,10 @@ function FightDetailDrawer({
                 type="button"
                 variant="outline"
                 onClick={() => void onStart(fight.id)}
-                disabled={fight.status !== 'PENDING' || isStarting}
+                disabled={
+          (fight.status !== 'PENDING' && fight.status !== 'CALLED') ||
+          isStarting
+        }
               >
                 Iniciar
               </Button>

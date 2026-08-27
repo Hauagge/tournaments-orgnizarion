@@ -18,6 +18,7 @@ const POLLING_INTERVAL = 4000;
 // Agendadas primeiro; em andamento e finalizadas ficam por ultimo.
 const STATUS_ORDER: Record<Fight['status'], number> = {
   PENDING: 0,
+  CALLED: 0,
   IN_PROGRESS: 1,
   FINISHED: 2,
 };
@@ -71,12 +72,16 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
       .map((entry) => entry.fight);
   }, [queueQuery.data]);
 
+
   const upcoming =
-    orderedFights.find((fight) => fight.status === 'PENDING') ?? null;
+    orderedFights.find((fight) => fight.status === 'CALLED') ??
+    orderedFights.find((fight) => fight.status === 'PENDING') ??
+    null;
   const rest = orderedFights.filter((fight) => fight !== upcoming);
   const pendingCount = orderedFights.filter(
     (fight) => fight.status === 'PENDING',
   ).length;
+  const isUpcomingCalled = upcoming?.status === 'CALLED';
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6">
@@ -113,10 +118,14 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
       {!queueQuery.isLoading && !queueQuery.isError && (
         <>
           {upcoming ? (
-            <section className="rounded-3xl border-4 border-slate-900 bg-amber-100 p-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] sm:p-6">
+            <section
+              className={`rounded-3xl border-4 border-slate-900 p-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] sm:p-6 ${
+                isUpcomingCalled ? 'bg-violet-100' : 'bg-amber-100'
+              }`}
+            >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex rounded-full border-2 border-slate-900 bg-slate-950 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-white">
-                  Proxima
+                  {isUpcomingCalled ? 'Ja chamada' : 'Proxima'}
                 </span>
                 <span className={getFightStatusBadgeClassName(upcoming.status)}>
                   {getFightStatusLabel(upcoming.status)}
@@ -152,7 +161,9 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                         ? 'bg-blue-50'
                         : fight.status === 'FINISHED'
                           ? 'bg-slate-50 opacity-60'
-                          : 'bg-white'
+                          : fight.status === 'CALLED'
+                            ? 'bg-violet-50'
+                            : 'bg-white'
                     }`}
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-50 text-sm font-black text-slate-950 sm:h-11 sm:w-11 sm:text-base">
@@ -187,6 +198,10 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
               Agendada
             </span>
             <span className="inline-flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-violet-500" />
+              Chamada
+            </span>
+            <span className="inline-flex items-center gap-2">
               <span className="h-3 w-3 rounded-full bg-blue-500" />
               Em andamento
             </span>
@@ -210,6 +225,10 @@ function getFightLabel(fight: Fight | null) {
 }
 
 function getFightStatusDotClassName(status: Fight['status']) {
+  if (status === 'CALLED') {
+    return 'bg-violet-500';
+  }
+
   if (status === 'IN_PROGRESS') {
     return 'bg-blue-500';
   }

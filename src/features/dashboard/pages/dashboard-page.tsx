@@ -45,7 +45,9 @@ export default function DashboardPage() {
   const shouldPollCompetitionData = (fights: Fight[]) =>
     fights.some(
       (fight) =>
-        fight.status === 'IN_PROGRESS' || fight.status === 'PENDING',
+        fight.status === 'IN_PROGRESS' ||
+        fight.status === 'CALLED' ||
+        fight.status === 'PENDING',
     );
   const areasQuery = useAreas(activeCompetitionId, {
     refetchInterval: (query) =>
@@ -112,6 +114,9 @@ export default function DashboardPage() {
         const nextFight =
           queueData?.nextFight ??
           fights.find(
+            (fight) => fight.areaId === area.id && fight.status === 'CALLED',
+          ) ??
+          fights.find(
             (fight) => fight.areaId === area.id && fight.status === 'PENDING',
           ) ??
           area.nextFight;
@@ -146,7 +151,7 @@ export default function DashboardPage() {
 
   const waitingFights = useMemo(() => {
     return fights.filter((fight) => {
-      if (fight.status !== 'PENDING') {
+      if (fight.status !== 'PENDING' && fight.status !== 'CALLED') {
         return false;
       }
 
@@ -252,6 +257,7 @@ export default function DashboardPage() {
               >
                 <option value="ALL">Todos</option>
                 <option value="IN_PROGRESS">Em andamento</option>
+                <option value="CALLED">Chamada</option>
                 <option value="PENDING">Aguardando</option>
                 <option value="FINISHED">Finalizadas</option>
               </select>

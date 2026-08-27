@@ -2,6 +2,7 @@ import { Athlete, normalizeAthlete } from '@/features/athletes/types/athlete';
 
 export const fightStatusOptions = [
   'PENDING',
+  'CALLED',
   'IN_PROGRESS',
   'FINISHED',
 ] as const;
@@ -243,6 +244,8 @@ function readObject(record: Record<string, unknown>, keys: string[]) {
 
 function normalizeFightStatus(rawStatus: string): FightStatus {
   switch (rawStatus.toUpperCase()) {
+    case 'CALLED':
+      return 'CALLED';
     case 'STARTED':
     case 'RUNNING':
     case 'IN_PROGRESS':
@@ -471,6 +474,8 @@ export function normalizeUpdateFightOrderResponse(
 
 export function getFightStatusLabel(status: FightStatus) {
   switch (status) {
+    case 'CALLED':
+      return 'Chamada';
     case 'IN_PROGRESS':
       return 'Em andamento';
     case 'FINISHED':
@@ -482,6 +487,8 @@ export function getFightStatusLabel(status: FightStatus) {
 
 export function getFightStatusBadgeClassName(status: FightStatus) {
   switch (status) {
+    case 'CALLED':
+      return 'inline-flex rounded-full border-2 border-violet-900 bg-violet-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-violet-900';
     case 'IN_PROGRESS':
       return 'inline-flex rounded-full border-2 border-blue-900 bg-blue-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-blue-900';
     case 'FINISHED':
