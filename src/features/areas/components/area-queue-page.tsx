@@ -145,9 +145,17 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
                   </span>
                 ) : null}
               </div>
-              <p className="mt-4 text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">
-                {getFightLabel(upcoming)}
-              </p>
+              <div className="mt-4 space-y-1">
+                <p className="break-words text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">
+                  {upcoming.athleteA?.name || 'A definir'}
+                </p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                  vs
+                </p>
+                <p className="break-words text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">
+                  {upcoming.athleteB?.name || 'A definir'}
+                </p>
+              </div>
             </section>
           ) : (
             <StateCard
@@ -163,38 +171,45 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
               </p>
               <ul className="space-y-2 sm:space-y-3">
                 {rest.map((fight, index) => (
-                  <li
-                    key={fight.id}
-                    className={`flex items-center gap-3 rounded-2xl border-2 border-slate-900 p-3 shadow-[3px_3px_0_0_rgba(15,23,42,0.9)] sm:gap-4 sm:p-4 ${
-                      fight.status === 'IN_PROGRESS'
-                        ? 'bg-blue-50'
-                        : fight.status === 'FINISHED'
-                          ? 'bg-slate-50 opacity-60'
-                          : fight.status === 'CALLED'
-                            ? 'bg-violet-50'
-                            : 'bg-white'
-                    }`}
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-slate-900 bg-slate-50 text-sm font-black text-slate-950 sm:h-11 sm:w-11 sm:text-base">
+                  <li key={fight.id} className="flex items-start gap-2 sm:gap-3">
+                    <span className="w-5 shrink-0 pt-3 text-right text-sm font-black text-slate-500 sm:w-7 sm:text-base">
                       {(upcoming ? 2 : 1) + index}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black text-slate-950 sm:text-base">
-                        {getFightLabel(fight)}
-                      </p>
-                      {fight.categoryName ? (
-                        <p className="truncate text-xs text-slate-500 sm:text-sm">
-                          {fight.categoryName}
+                    <div
+                      className={`flex min-w-0 flex-1 items-start gap-3 rounded-2xl border-2 border-slate-900 p-3 shadow-[3px_3px_0_0_rgba(15,23,42,0.9)] sm:p-4 ${
+                        fight.status === 'IN_PROGRESS'
+                          ? 'bg-blue-50'
+                          : fight.status === 'FINISHED'
+                            ? 'bg-slate-50 opacity-60'
+                            : fight.status === 'CALLED'
+                              ? 'bg-violet-50'
+                              : 'bg-white'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-sm font-black leading-snug text-slate-950 sm:text-base">
+                          {fight.athleteA?.name || 'A definir'}
                         </p>
-                      ) : null}
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                          vs
+                        </p>
+                        <p className="break-words text-sm font-black leading-snug text-slate-950 sm:text-base">
+                          {fight.athleteB?.name || 'A definir'}
+                        </p>
+                        {fight.categoryName ? (
+                          <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">
+                            {fight.categoryName}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`mt-1 h-3 w-3 shrink-0 rounded-full ${getFightStatusDotClassName(
+                          fight.status,
+                        )}`}
+                        aria-hidden="true"
+                        title={getFightStatusLabel(fight.status)}
+                      />
                     </div>
-                    <span
-                      className={`h-3 w-3 shrink-0 rounded-full ${getFightStatusDotClassName(
-                        fight.status,
-                      )}`}
-                      aria-hidden="true"
-                      title={getFightStatusLabel(fight.status)}
-                    />
                   </li>
                 ))}
               </ul>
@@ -223,14 +238,6 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
       )}
     </div>
   );
-}
-
-function getFightLabel(fight: Fight | null) {
-  if (!fight) {
-    return 'A definir vs A definir';
-  }
-
-  return `${fight.athleteA?.name || 'A definir'} vs ${fight.athleteB?.name || 'A definir'}`;
 }
 
 function getFightStatusDotClassName(status: Fight['status']) {

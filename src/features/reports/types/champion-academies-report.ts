@@ -11,6 +11,8 @@ export type ChampionAthleteItem = {
   athleteName: string;
   categoryId: string;
   categoryName: string;
+  keyGroupId?: string;
+  keyGroupName?: string;
   belt?: string;
   ageDivision?: string;
   weightDivision?: string;
@@ -105,6 +107,8 @@ function normalizeChampionAthleteItem(input: unknown): ChampionAthleteItem {
     athleteName: readString(record, ['athleteName', 'name']),
     categoryId: readIdentifier(record, ['categoryId']),
     categoryName: readString(record, ['categoryName']),
+    keyGroupId: readOptionalIdentifier(record, ['keyGroupId']),
+    keyGroupName: readOptionalString(record, ['keyGroupName']),
     belt: readOptionalString(record, ['belt']),
     ageDivision: readOptionalString(record, ['ageDivision']),
     weightDivision: readOptionalString(record, ['weightDivision']),

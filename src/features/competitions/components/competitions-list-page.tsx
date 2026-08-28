@@ -68,11 +68,16 @@ export default function CompetitionsListPage() {
               <Link className="rounded-lg px-3 py-2 text-slate-950" href="/competitions">
                 Campeonatos
               </Link>
-              <Link className="rounded-lg px-3 py-2 hover:bg-slate-50" href="/athletes">
-                Atletas
-              </Link>
+              <RoleGuard allow={['DESK', 'ORGANIZATION']}>
+                <Link className="rounded-lg px-3 py-2 hover:bg-slate-50" href="/athletes">
+                  Atletas
+                </Link>
+              </RoleGuard>
               <Link className="rounded-lg px-3 py-2 hover:bg-slate-50" href="/areas">
                 Áreas
+              </Link>
+              <Link className="rounded-lg px-3 py-2 hover:bg-slate-50" href="/fights">
+                Lutas
               </Link>
               <Link className="rounded-lg px-3 py-2 hover:bg-slate-50" href="/dashboard">
                 Relatórios

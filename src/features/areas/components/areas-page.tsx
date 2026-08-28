@@ -22,7 +22,7 @@ export default function AreasPage() {
   const createMutation = useCreateAreas(activeCompetitionId);
   const { toast } = useToast();
   const { isAllowed: canCreateAreas } = useRoleAccess({
-    deny: ['DESK', 'PUBLIC'],
+    allow: ['ORGANIZATION'],
   });
 
   useEffect(() => {
@@ -71,11 +71,13 @@ export default function AreasPage() {
               Configure e acompanhe as areas da competicao
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              Cadastre a quantidade de areas, personalize os nomes e abra a fila de cada uma.
+              {canCreateAreas
+                ? 'Cadastre a quantidade de areas, personalize os nomes e abra a fila de cada uma.'
+                : 'Abra a fila de cada area para acompanhar as lutas.'}
             </p>
           </div>
 
-          <RoleGuard deny={['DESK', 'PUBLIC']}>
+          <RoleGuard allow={['ORGANIZATION']}>
             <Link href="/areas/distribution">
               <Button className="h-14 rounded-2xl border-4 border-slate-900 bg-slate-900 px-6 text-base font-black uppercase tracking-[0.12em] hover:bg-slate-800">
                 Distribuição manual
@@ -103,7 +105,7 @@ export default function AreasPage() {
                 : 'xl:grid-cols-1'
             }`}
           >
-            <RoleGuard deny={['DESK', 'PUBLIC']}>
+            <RoleGuard allow={['ORGANIZATION']}>
               <Card className="border-4 border-slate-900 p-0">
                 <CardContent className="space-y-5 p-5">
                   <div>

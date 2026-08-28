@@ -6,7 +6,11 @@ import { buildAthleteReadinessSummary } from '@/features/athletes/lib/athlete-re
 import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import { useCompetition } from '@/features/competitions/hooks/use-competitions';
 import { getCompetitionSectionItems } from '@/features/competitions/lib/competition-flow';
+import { useRoleAccess } from '@/features/auth/hooks/use-role-access';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
+
+// Staff so acompanha a competicao: as demais abas sao de operacao/preparacao.
+const STAFF_SECTION_HREFS = ['/areas', '/fights'];
 
 function isSectionActive(pathname: string, href: string) {
   if (pathname === href) {
@@ -28,6 +32,9 @@ export function CompetitionSectionNav() {
   const hasHydrated = useCompetitionStore((state) => state.hasHydrated);
   const competitionQuery = useCompetition(activeCompetitionId ?? '');
   const athletesQuery = useAthletes(activeCompetitionId, '');
+  const { isAllowed: canManageCompetition } = useRoleAccess({
+    allow: ['DESK', 'ORGANIZATION'],
+  });
 
   if (!hasHydrated || !activeCompetitionId || pathname.startsWith('/competitions')) {
     return null;
@@ -41,7 +48,10 @@ export function CompetitionSectionNav() {
   const readiness = athletesQuery.data
     ? buildAthleteReadinessSummary(athletesQuery.data)
     : null;
-  const sectionItems = getCompetitionSectionItems(mode, readiness);
+  const allSectionItems = getCompetitionSectionItems(mode, readiness);
+  const sectionItems = canManageCompetition
+    ? allSectionItems
+    : allSectionItems.filter((item) => STAFF_SECTION_HREFS.includes(item.href));
 
   return (
     <div className="mb-6 overflow-x-auto rounded-[28px] border-4 border-slate-900 bg-white p-3 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">

@@ -81,6 +81,43 @@ describe('getChampionAcademiesReport', () => {
     );
   });
 
+  it('usa o nome da chave quando o campeao nao tem categoria', async () => {
+    vi.mocked(apiFetch).mockResolvedValue({
+      data: {
+        competitionId: 1,
+        totalChampionAthletes: 1,
+        academies: [
+          {
+            position: 1,
+            academyId: 7,
+            academyName: 'Academia A',
+            totalChampions: 1,
+            champions: [
+              {
+                athleteId: 10,
+                athleteName: 'João Silva',
+                categoryId: null,
+                categoryName: null,
+                keyGroupId: 3,
+                keyGroupName: 'Chave Azul',
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const response = await getChampionAcademiesReport('1');
+
+    expect(response.academies[0]?.champions[0]).toEqual(
+      expect.objectContaining({
+        categoryName: '',
+        keyGroupId: '3',
+        keyGroupName: 'Chave Azul',
+      }),
+    );
+  });
+
   it('envia filtros na query string quando informados', async () => {
     vi.mocked(apiFetch).mockResolvedValue({
       data: {
