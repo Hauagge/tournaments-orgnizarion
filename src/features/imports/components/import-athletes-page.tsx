@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { FileUp, SearchCheck, Upload } from 'lucide-react';
+import { FileUp, RefreshCw, SearchCheck, Upload } from 'lucide-react';
 import {
   useAthleteImportPreview,
   useImportAthletes,
@@ -11,6 +11,7 @@ import {
   athleteImportCsvColumns,
   AthleteImportPreviewRow,
   AthleteImportSummary,
+  buildCsvFromPreviewRows,
 } from '@/features/imports/types/athlete-import';
 import { useCompetitionStore } from '@/shared/stores/useCompetitionStore';
 import { Button } from '@/shared/ui/button';
@@ -28,6 +29,7 @@ import { useToast } from '@/shared/ui/use-toast';
 export default function ImportAthletesPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewRows, setPreviewRows] = useState<AthleteImportPreviewRow[]>([]);
+  const [hasPendingEdits, setHasPendingEdits] = useState(false);
   const [importSummary, setImportSummary] = useState<AthleteImportSummary | null>(
     null,
   );
@@ -53,6 +55,7 @@ export default function ImportAthletesPage() {
       const csvText = await selectedFile.text();
       const rows = await previewMutation.mutateAsync(csvText);
       setPreviewRows(rows);
+      setHasPendingEdits(false);
       setImportSummary(null);
     } catch (error) {
       toast({
@@ -64,11 +67,50 @@ export default function ImportAthletesPage() {
     }
   }
 
-  async function handleImport() {
-    if (!activeCompetitionId || validRowsCount === 0 || !selectedFile) return;
+  function handleCellChange(rowIndex: number, column: string, value: string) {
+    setPreviewRows((current) =>
+      current.map((row, index) =>
+        index === rowIndex
+          ? { ...row, data: { ...row.data, [column]: value } }
+          : row,
+      ),
+    );
+    setHasPendingEdits(true);
+  }
+
+  async function handleRevalidate() {
+    if (!activeCompetitionId || previewRows.length === 0) return;
 
     try {
-      const summary = await importMutation.mutateAsync(selectedFile);
+      const csvText = buildCsvFromPreviewRows(previewRows);
+      const rows = await previewMutation.mutateAsync(csvText);
+      setPreviewRows(rows);
+      setHasPendingEdits(false);
+    } catch (error) {
+      toast({
+        title: 'Falha ao revalidar alterações',
+        description:
+          error instanceof Error ? error.message : 'Tente novamente.',
+        variant: 'destructive',
+      });
+    }
+  }
+
+  async function handleImport() {
+    if (
+      !activeCompetitionId ||
+      validRowsCount === 0 ||
+      !selectedFile ||
+      hasPendingEdits
+    )
+      return;
+
+    try {
+      const csvText = buildCsvFromPreviewRows(previewRows);
+      const editedFile = new File([csvText], selectedFile.name, {
+        type: 'text/csv',
+      });
+      const summary = await importMutation.mutateAsync(editedFile);
       setImportSummary(summary);
       toast({
         title: 'Importação concluída',
@@ -91,6 +133,7 @@ export default function ImportAthletesPage() {
 
     setSelectedFile(file);
     setPreviewRows([]);
+    setHasPendingEdits(false);
     setImportSummary(null);
   }
 
@@ -185,13 +228,31 @@ export default function ImportAthletesPage() {
                     <SearchCheck className="mr-2 h-4 w-4" />
                     {previewMutation.isPending ? 'Validando...' : 'Preview'}
                   </Button>
+                  {previewRows.length > 0 && (
+                    <Button
+                      variant="outline"
+                      onClick={handleRevalidate}
+                      disabled={!hasPendingEdits || previewMutation.isPending}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      {previewMutation.isPending
+                        ? 'Revalidando...'
+                        : 'Revalidar alterações'}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     onClick={handleImport}
                     disabled={
                       !selectedFile ||
                       validRowsCount === 0 ||
+                      hasPendingEdits ||
                       importMutation.isPending
+                    }
+                    title={
+                      hasPendingEdits
+                        ? 'Revalide as alterações antes de importar.'
+                        : undefined
                     }
                   >
                     <FileUp className="mr-2 h-4 w-4" />
@@ -292,6 +353,19 @@ export default function ImportAthletesPage() {
             </Card>
           )}
 
+          {previewRows.length > 0 && (
+            <p className="text-sm text-slate-600">
+              Clique em um campo para corrigir o dado da linha (ex: data de
+              nascimento, peso, faixa) antes de importar.
+              {hasPendingEdits && (
+                <span className="ml-2 font-semibold text-amber-700">
+                  Há alterações não revalidadas — clique em &quot;Revalidar
+                  alterações&quot; antes de importar.
+                </span>
+              )}
+            </p>
+          )}
+
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <Table className="rounded-none border-0">
@@ -315,16 +389,36 @@ export default function ImportAthletesPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    previewRows.map((row) => (
+                    previewRows.map((row, rowIndex) => (
                       <TableRow
-                        key={`${row.line}-${row.data.Nome}`}
+                        key={rowIndex}
                         className={
                           row.isValid ? 'bg-white' : 'bg-red-50 hover:bg-red-50'
                         }
                       >
                         <TableCell className="font-semibold">{row.line}</TableCell>
                         {athleteImportCsvColumns.map((column) => (
-                          <TableCell key={column}>{row.data[column] || '-'}</TableCell>
+                          <TableCell key={column} className="p-1.5">
+                            <input
+                              type="text"
+                              value={row.data[column] ?? ''}
+                              onChange={(event) =>
+                                handleCellChange(
+                                  rowIndex,
+                                  column,
+                                  event.target.value,
+                                )
+                              }
+                              placeholder={
+                                column === 'Data de Nasc'
+                                  ? 'dd/mm/aaaa'
+                                  : column === 'Peso'
+                                    ? 'ex: 82.3'
+                                    : '-'
+                              }
+                              className="h-9 w-full min-w-[7rem] rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus:border-slate-900"
+                            />
+                          </TableCell>
                         ))}
                         <TableCell>
                           {row.errors.length === 0 ? (

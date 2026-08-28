@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Check, RefreshCcw, Search, X } from 'lucide-react';
+import { RefreshCcw, Scale, Search } from 'lucide-react';
 import { useAthletes } from '@/features/athletes/hooks/use-athletes';
 import {
   Athlete,
@@ -247,26 +247,15 @@ export default function WeighInTab() {
                       </TableCell>
                       <TableCell align="right">
                         {athlete.weighInStatus === 'PENDING' ? (
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="px-2 text-emerald-700"
-                              aria-label={`Aprovar ${athlete.name}`}
-                              onClick={() => openDecisionModal(athlete)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="px-2 text-red-700"
-                              aria-label={`Reprovar ${athlete.name}`}
-                              onClick={() => openDecisionModal(athlete)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            aria-label={`Registrar pesagem de ${athlete.name}`}
+                            onClick={() => openDecisionModal(athlete)}
+                          >
+                            <Scale className="mr-2 h-4 w-4" />
+                            Pesar
+                          </Button>
                         ) : (
                           <Button
                             type="button"

@@ -217,6 +217,7 @@ export function normalizeAthlete(input: unknown): Athlete {
       'realWeightGrams',
       'actualWeightGrams',
       'weightInGrams',
+      'weighInMeasuredWeightGrams',
       'pesoRealGramas',
       'pesoAferidoGramas',
     ]),

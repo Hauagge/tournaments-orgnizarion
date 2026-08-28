@@ -167,6 +167,15 @@ export default function FightsTab() {
   }, [fights, hasPendingOrderChanges]);
 
   const orderedFights = hasPendingOrderChanges ? draftOrderedFights : fights;
+  const areasWithActiveFight = useMemo(() => {
+    const areaIds = new Set<string>();
+    for (const fight of fights) {
+      if (fight.status === 'IN_PROGRESS' && fight.areaId) {
+        areaIds.add(fight.areaId);
+      }
+    }
+    return areaIds;
+  }, [fights]);
   const selectedFight = useMemo(
     () => orderedFights.find((fight) => fight.id === selectedFightId) ?? null,
     [orderedFights, selectedFightId],
@@ -948,6 +957,9 @@ export default function FightsTab() {
                           fight={fight}
                           isStarting={startMutation.isPending}
                           isFinishing={finishMutation.isPending}
+                          isAreaBusy={Boolean(
+                            fight.areaId && areasWithActiveFight.has(fight.areaId),
+                          )}
                           onOpen={() => setSelectedFightId(fight.id)}
                           onStart={handleStartFight}
                           onFinish={(fightId) => setFinishFightId(fightId)}
@@ -1015,6 +1027,9 @@ export default function FightsTab() {
                           fight={fight}
                           isStarting={startMutation.isPending}
                           isFinishing={finishMutation.isPending}
+                          isAreaBusy={Boolean(
+                            fight.areaId && areasWithActiveFight.has(fight.areaId),
+                          )}
                           onStart={handleStartFight}
                           onFinish={(fightId) => setFinishFightId(fightId)}
                           onOpenScoreboard={(fightId) =>
@@ -1133,6 +1148,10 @@ export default function FightsTab() {
                                 fight={fight}
                                 isStarting={startMutation.isPending}
                                 isFinishing={finishMutation.isPending}
+                                isAreaBusy={Boolean(
+                                  fight.areaId &&
+                                    areasWithActiveFight.has(fight.areaId),
+                                )}
                                 onStart={handleStartFight}
                                 onFinish={(fightId) =>
                                   setFinishFightId(fightId)
@@ -1190,6 +1209,10 @@ export default function FightsTab() {
             }}
             isStarting={startMutation.isPending}
             isFinishing={finishMutation.isPending}
+            isAreaBusy={Boolean(
+              selectedFight?.areaId &&
+                areasWithActiveFight.has(selectedFight.areaId),
+            )}
           />
 
           <FightFormDialog
@@ -1248,6 +1271,7 @@ function FightActions({
   fight,
   isStarting,
   isFinishing,
+  isAreaBusy = false,
   onStart,
   onFinish,
   onOpenScoreboard,
@@ -1256,11 +1280,19 @@ function FightActions({
   fight: Fight;
   isStarting: boolean;
   isFinishing: boolean;
+  isAreaBusy?: boolean;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
   onOpenScoreboard?: (fightId: string) => void;
   onEdit?: (fightId: string) => void;
 }) {
+  const hasNoArea = !fight.areaId;
+  const startDisabledReason = hasNoArea
+    ? 'Distribua esta luta para uma área antes de iniciar.'
+    : isAreaBusy
+      ? 'Esta área já tem uma luta em andamento.'
+      : undefined;
+
   return (
     <div className="flex flex-wrap gap-2">
       <Button
@@ -1269,8 +1301,11 @@ function FightActions({
         onClick={() => void onStart(fight.id)}
         disabled={
           (fight.status !== 'PENDING' && fight.status !== 'CALLED') ||
-          isStarting
+          isStarting ||
+          hasNoArea ||
+          isAreaBusy
         }
+        title={startDisabledReason}
       >
         <Play className="mr-2 h-4 w-4" />
         Iniciar
@@ -1436,6 +1471,7 @@ function UpcomingFightCard({
   fight,
   isStarting,
   isFinishing,
+  isAreaBusy,
   onOpen,
   onStart,
   onFinish,
@@ -1445,6 +1481,7 @@ function UpcomingFightCard({
   fight: Fight;
   isStarting: boolean;
   isFinishing: boolean;
+  isAreaBusy: boolean;
   onOpen: () => void;
   onStart: (fightId: string) => void | Promise<void>;
   onFinish: (fightId: string) => void;
@@ -1500,6 +1537,7 @@ function UpcomingFightCard({
           fight={fight}
           isStarting={isStarting}
           isFinishing={isFinishing}
+          isAreaBusy={isAreaBusy}
           onStart={onStart}
           onFinish={onFinish}
           onOpenScoreboard={onOpenScoreboard}
@@ -1569,6 +1607,7 @@ function FightDetailDrawer({
   onEdit,
   isStarting,
   isFinishing,
+  isAreaBusy,
 }: {
   fight: Fight | null;
   isOpen: boolean;
@@ -1579,6 +1618,7 @@ function FightDetailDrawer({
   onEdit: (fightId: string) => void;
   isStarting: boolean;
   isFinishing: boolean;
+  isAreaBusy: boolean;
 }) {
   return (
     <Dialog
@@ -1666,9 +1706,18 @@ function FightDetailDrawer({
                 variant="outline"
                 onClick={() => void onStart(fight.id)}
                 disabled={
-          (fight.status !== 'PENDING' && fight.status !== 'CALLED') ||
-          isStarting
-        }
+                  (fight.status !== 'PENDING' && fight.status !== 'CALLED') ||
+                  isStarting ||
+                  !fight.areaId ||
+                  isAreaBusy
+                }
+                title={
+                  !fight.areaId
+                    ? 'Distribua esta luta para uma área antes de iniciar.'
+                    : isAreaBusy
+                      ? 'Esta área já tem uma luta em andamento.'
+                      : undefined
+                }
               >
                 Iniciar
               </Button>

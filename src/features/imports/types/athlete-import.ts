@@ -219,6 +219,25 @@ export function normalizePreviewResponse(
   return rows.map(normalizeRow);
 }
 
+function escapeCsvField(value: string): string {
+  if (/[",\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  return value;
+}
+
+export function buildCsvFromPreviewRows(rows: AthleteImportPreviewRow[]): string {
+  const header = athleteImportCsvColumns.map(escapeCsvField).join(',');
+  const lines = rows.map((row) =>
+    athleteImportCsvColumns
+      .map((column) => escapeCsvField(row.data[column] ?? ''))
+      .join(','),
+  );
+
+  return [header, ...lines].join('\r\n');
+}
+
 export function normalizeImportSummary(
   response: ImportResponse,
 ): AthleteImportSummary {
