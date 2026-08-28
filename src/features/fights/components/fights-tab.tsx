@@ -111,9 +111,16 @@ function getCompactFightStatusBadgeClassName(status: Fight['status']) {
   }
 }
 
+const FIGHTS_POLLING_INTERVAL = 4000;
+
+function getFightPlacementLabel(fight: Fight): string {
+  return [fight.areaName, getFightGroupLabel(fight)]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join(' - ');
+}
+
 export default function FightsTab() {
-  // Staff acompanha a competicao em modo leitura; executar luta e do mesario
-  // (DESK) e da organizacao.
   const { isAllowed: canManageFights } = useRoleAccess({
     allow: ['DESK', 'ORGANIZATION'],
   });
@@ -124,14 +131,18 @@ export default function FightsTab() {
   const [areaFilter, setAreaFilter] = useState('ALL');
   const [selectedFightId, setSelectedFightId] = useState<string | null>(null);
   const [finishFightId, setFinishFightId] = useState<string | null>(null);
-  const [fightFormMode, setFightFormMode] = useState<'create' | 'edit'>('create');
+  const [fightFormMode, setFightFormMode] = useState<'create' | 'edit'>(
+    'create',
+  );
   const [fightFormFightId, setFightFormFightId] = useState<string | null>(null);
   const [finishPreset, setFinishPreset] = useState<{
     fightId: string;
     winnerId: string;
     winType: (typeof winTypeOptions)[number];
   } | null>(null);
-  const [scoreboardFightId, setScoreboardFightId] = useState<string | null>(null);
+  const [scoreboardFightId, setScoreboardFightId] = useState<string | null>(
+    null,
+  );
   const [scoreboardAutoStartToken, setScoreboardAutoStartToken] = useState(0);
   const [winnerId, setWinnerId] = useState('');
   const [winType, setWinType] =
@@ -151,11 +162,17 @@ export default function FightsTab() {
   const athletesQuery = useAthletes(activeCompetitionId, '');
   const areasQuery = useAreas(activeCompetitionId);
   const categoriesQuery = useCategories(activeCompetitionId);
-  useCompetitionSocket({
+  const realtime = useCompetitionSocket({
     token,
     competitionId: activeCompetitionId,
   });
-  const fightsQuery = useFights(activeCompetitionId);
+  // Sem socket ativo a lista precisa de polling: a ordem salva por um usuario
+  // tem que aparecer para os outros sem recarregar a pagina.
+  const isRealtimeActive =
+    realtime.connected && !realtime.joining && !realtime.joinError;
+  const fightsQuery = useFights(activeCompetitionId, {
+    refetchInterval: isRealtimeActive ? false : FIGHTS_POLLING_INTERVAL,
+  });
   const createFightMutation = useCreateFight(activeCompetitionId);
   const startMutation = useStartFight(activeCompetitionId);
   const finishMutation = useFinishFight(activeCompetitionId);
@@ -376,8 +393,7 @@ export default function FightsTab() {
         href: '/areas/distribution',
         label: 'Distribuição manual',
         title: 'Existem lutas sem área definida.',
-        description:
-          `${unassignedFights.length} luta(s) ainda não receberam área. Use a distribuição manual.`,
+        description: `${unassignedFights.length} luta(s) ainda não receberam área. Use a distribuição manual.`,
       };
     }
 
@@ -492,7 +508,10 @@ export default function FightsTab() {
     }
   }
 
-  function handleSubmissionFinishSelection(fightId: string, selectedWinnerId: string) {
+  function handleSubmissionFinishSelection(
+    fightId: string,
+    selectedWinnerId: string,
+  ) {
     setFinishPreset({
       fightId,
       winnerId: selectedWinnerId,
@@ -614,9 +633,15 @@ export default function FightsTab() {
               Acompanhe lutas em andamento e próximas chamadas
             </h1>
             <p className="mt-3 max-w-3xl text-base text-slate-600">
-              Monitore o que está acontecendo agora, veja a sequência das
-              próximas lutas e opere resultados sem sair da tela.
+              {canManageFights
+                ? 'Monitore o que está acontecendo agora, veja a sequência das próximas lutas e opere resultados sem sair da tela.'
+                : 'Acompanhe a lista completa de lutas da competição. Iniciar, editar e finalizar sao acoes da mesa e da organizacao.'}
             </p>
+            {!canManageFights ? (
+              <span className="mt-3 inline-flex rounded-full border-2 border-slate-900 bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-700">
+                Somente leitura
+              </span>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 lg:items-end">
@@ -655,77 +680,91 @@ export default function FightsTab() {
         <>
           <Card className="border-4 border-slate-900 p-0">
             <CardContent className="space-y-4 p-5">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.7fr))_auto]">
-                <label className="block space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    <Search className="h-4 w-4" />
-                    Pesquisar por atleta ou categoria
-                  </span>
-                  <input
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder="Ex.: João, Adulto Leve"
-                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
-                  />
-                </label>
+              <div
+                className={
+                  canManageFights
+                    ? 'grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.7fr))_auto]'
+                    : 'grid gap-4 sm:max-w-xs'
+                }
+              >
+                {canManageFights ? (
+                  <>
+                    <label className="block space-y-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                        <Search className="h-4 w-4" />
+                        Pesquisar por atleta ou categoria
+                      </span>
+                      <input
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        placeholder="Ex.: João, Adulto Leve"
+                        className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                      />
+                    </label>
 
-                <label className="block space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    <Filter className="h-4 w-4" />
-                    Categoria
-                  </span>
-                  <select
-                    value={categoryFilter}
-                    onChange={(event) => setCategoryFilter(event.target.value)}
-                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
-                  >
-                    <option value="ALL">Todas</option>
-                    {categoryOptions.map((category) => (
-                      <option key={category.value} value={category.value}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <label className="block space-y-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                        <Filter className="h-4 w-4" />
+                        Categoria
+                      </span>
+                      <select
+                        value={categoryFilter}
+                        onChange={(event) =>
+                          setCategoryFilter(event.target.value)
+                        }
+                        className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                      >
+                        <option value="ALL">Todas</option>
+                        {categoryOptions.map((category) => (
+                          <option key={category.value} value={category.value}>
+                            {category.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                <label className="block space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    <Clock3 className="h-4 w-4" />
-                    Status
-                  </span>
-                  <select
-                    value={statusFilter}
-                    onChange={(event) =>
-                      setStatusFilter(event.target.value as 'ALL' | FightStatus)
-                    }
-                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
-                  >
-                    <option value="ALL">Todos</option>
-                    <option value="PENDING">Pendente</option>
-                    <option value="CALLED">Chamada</option>
-                    <option value="IN_PROGRESS">Em andamento</option>
-                    <option value="FINISHED">Finalizada</option>
-                  </select>
-                </label>
+                    <label className="block space-y-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                        <Clock3 className="h-4 w-4" />
+                        Status
+                      </span>
+                      <select
+                        value={statusFilter}
+                        onChange={(event) =>
+                          setStatusFilter(
+                            event.target.value as 'ALL' | FightStatus,
+                          )
+                        }
+                        className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                      >
+                        <option value="ALL">Todos</option>
+                        <option value="PENDING">Pendente</option>
+                        <option value="CALLED">Chamada</option>
+                        <option value="IN_PROGRESS">Em andamento</option>
+                        <option value="FINISHED">Finalizada</option>
+                      </select>
+                    </label>
 
-                <label className="block space-y-2">
-                  <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    <Clock3 className="h-4 w-4" />
-                    Rodada
-                  </span>
-                  <select
-                    value={roundFilter}
-                    onChange={(event) => setRoundFilter(event.target.value)}
-                    className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
-                  >
-                    <option value="ALL">Todas</option>
-                    {roundOptions.map((round) => (
-                      <option key={round} value={String(round)}>
-                        {getFightRoundLabel(round)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <label className="block space-y-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                        <Clock3 className="h-4 w-4" />
+                        Rodada
+                      </span>
+                      <select
+                        value={roundFilter}
+                        onChange={(event) => setRoundFilter(event.target.value)}
+                        className="h-11 w-full rounded-xl border-2 border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-900"
+                      >
+                        <option value="ALL">Todas</option>
+                        {roundOptions.map((round) => (
+                          <option key={round} value={String(round)}>
+                            {getFightRoundLabel(round)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                ) : null}
 
                 <label className="block space-y-2">
                   <span className="inline-flex items-center gap-2 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
@@ -763,7 +802,7 @@ export default function FightsTab() {
                 ) : null}
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-4">
+              <div className="grid grid-cols-4 gap-2 lg:gap-4">
                 <MetricTile
                   label="Em andamento"
                   value={String(inProgressFights.length)}
@@ -787,48 +826,59 @@ export default function FightsTab() {
             </CardContent>
           </Card>
 
-          {canManageFights && !fightsQuery.isLoading && !fightsQuery.isError && orderedFights.length > 0 && (
-            <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
-              <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
-                    Ordenação manual
-                  </p>
-                  <p className="text-sm text-slate-700">
-                    Arraste as linhas na tabela para reordenar a sequência visível. Ao salvar, o front envia a lista completa com <code>fightId</code> e <code>orderIndex</code>.
-                  </p>
-                  {!canPersistFightOrder(orderedFights) ? (
-                    <p className="text-sm text-red-700">
-                      Esta listagem possui luta com identificador inválido para persistência da ordem.
+          {canManageFights &&
+            !fightsQuery.isLoading &&
+            !fightsQuery.isError &&
+            orderedFights.length > 0 && (
+              <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
+                <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                      Ordenação manual
                     </p>
-                  ) : null}
-                </div>
+                    <p className="text-sm text-slate-700">
+                      Arraste as linhas na tabela para reordenar a sequência
+                      visível. Ao salvar, o front envia a lista completa com{' '}
+                      <code>fightId</code> e <code>orderIndex</code>.
+                    </p>
+                    {!canPersistFightOrder(orderedFights) ? (
+                      <p className="text-sm text-red-700">
+                        Esta listagem possui luta com identificador inválido
+                        para persistência da ordem.
+                      </p>
+                    ) : null}
+                  </div>
 
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleResetFightOrder}
-                    disabled={!hasPendingOrderChanges || updateFightOrderMutation.isPending}
-                  >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Desfazer
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => void handleSaveFightOrder()}
-                    disabled={!canSaveFightOrder}
-                    className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    {updateFightOrderMutation.isPending ? 'Salvando ordem...' : 'Salvar ordem'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleResetFightOrder}
+                      disabled={
+                        !hasPendingOrderChanges ||
+                        updateFightOrderMutation.isPending
+                      }
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Desfazer
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => void handleSaveFightOrder()}
+                      disabled={!canSaveFightOrder}
+                      className="h-12 rounded-2xl border-4 border-slate-900 bg-slate-900 px-5 text-sm font-black uppercase tracking-[0.12em] hover:bg-slate-800"
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {updateFightOrderMutation.isPending
+                        ? 'Salvando ordem...'
+                        : 'Salvar ordem'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-          {contextualNextStep ? (
+          {contextualNextStep && (
             <Card className="border-4 border-amber-300 bg-amber-50 p-0 shadow-[6px_6px_0_0_rgba(120,53,15,0.14)]">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
@@ -857,17 +907,6 @@ export default function FightsTab() {
                     Aguarde
                   </Button>
                 )}
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-4 border-emerald-300 bg-emerald-50 p-0 shadow-[6px_6px_0_0_rgba(6,95,70,0.12)]">
-              <CardContent className="p-5">
-                <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-900">
-                  Operação liberada
-                </p>
-                <p className="mt-2 text-sm text-emerald-950">
-                  As lutas já estão geradas e distribuídas. A tela pode permanecer focada em monitoramento e operação.
-                </p>
               </CardContent>
             </Card>
           )}
@@ -910,131 +949,114 @@ export default function FightsTab() {
               <>
                 {canManageFights ? (
                   <>
-                <section className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
-                    <h2 className="text-2xl font-black text-slate-950">
-                      Lutas em andamento
-                    </h2>
-                  </div>
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                        <h2 className="text-2xl font-black text-slate-950">
+                          Lutas em andamento
+                        </h2>
+                      </div>
 
-                  {inProgressFights.length === 0 ? (
-                    <StateCard
-                      message="Nenhuma luta em andamento no momento."
-                      tone="empty"
-                    />
-                  ) : (
-                    <div className="grid gap-4 xl:grid-cols-2">
-                      {inProgressFights.map((fight) => (
-                        <LiveFightCard
-                          key={fight.id}
-                          fight={fight}
-                          isStarting={startMutation.isPending}
-                          isFinishing={finishMutation.isPending}
-                          onOpen={() => setSelectedFightId(fight.id)}
-                          onStart={handleStartFight}
-                          onFinish={(fightId) => setFinishFightId(fightId)}
-                          onOpenScoreboard={(fightId) =>
-                            setScoreboardFightId(fightId)
-                          }
-                          onEdit={(fightId) => {
-                            setFightFormMode('edit');
-                            setFightFormFightId(fightId);
-                          }}
+                      {inProgressFights.length === 0 ? (
+                        <StateCard
+                          message="Nenhuma luta em andamento no momento."
+                          tone="empty"
                         />
-                      ))}
-                    </div>
-                  )}
-                </section>
+                      ) : (
+                        <div className="grid gap-4 xl:grid-cols-2">
+                          {inProgressFights.map((fight) => (
+                            <LiveFightCard
+                              key={fight.id}
+                              fight={fight}
+                              isStarting={startMutation.isPending}
+                              isFinishing={finishMutation.isPending}
+                              onOpen={() => setSelectedFightId(fight.id)}
+                              onStart={handleStartFight}
+                              onFinish={(fightId) => setFinishFightId(fightId)}
+                              onOpenScoreboard={(fightId) =>
+                                setScoreboardFightId(fightId)
+                              }
+                              onEdit={(fightId) => {
+                                setFightFormMode('edit');
+                                setFightFormFightId(fightId);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
 
-                <section className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="h-3 w-3 rounded-full bg-sky-500" />
-                    <h2 className="text-2xl font-black text-slate-950">
-                      Próximas lutas
-                    </h2>
-                  </div>
+                    <section className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <span className="h-3 w-3 rounded-full bg-sky-500" />
+                        <h2 className="text-2xl font-black text-slate-950">
+                          Próximas lutas
+                        </h2>
+                      </div>
 
-                  {upcomingFights.length === 0 ? (
-                    <StateCard
-                      message="Nenhuma luta pendente para a sequência atual."
-                      tone="empty"
-                    />
-                  ) : (
-                    <div className="grid gap-4 lg:grid-cols-2">
-                      {upcomingFights.map((fight) => (
-                        <UpcomingFightCard
-                          key={fight.id}
-                          fight={fight}
-                          isStarting={startMutation.isPending}
-                          isFinishing={finishMutation.isPending}
-                          isAreaBusy={Boolean(
-                            fight.areaId && areasWithActiveFight.has(fight.areaId),
-                          )}
-                          onOpen={() => setSelectedFightId(fight.id)}
-                          onStart={handleStartFight}
-                          onFinish={(fightId) => setFinishFightId(fightId)}
-                          onOpenScoreboard={(fightId) =>
-                            setScoreboardFightId(fightId)
-                          }
-                          onEdit={(fightId) => {
-                            setFightFormMode('edit');
-                            setFightFormFightId(fightId);
-                          }}
+                      {upcomingFights.length === 0 ? (
+                        <StateCard
+                          message="Nenhuma luta pendente para a sequência atual."
+                          tone="empty"
                         />
-                      ))}
-                    </div>
-                  )}
-                </section>
+                      ) : (
+                        <div className="grid gap-4 lg:grid-cols-2">
+                          {upcomingFights.map((fight) => (
+                            <UpcomingFightCard
+                              key={fight.id}
+                              fight={fight}
+                              isStarting={startMutation.isPending}
+                              isFinishing={finishMutation.isPending}
+                              isAreaBusy={Boolean(
+                                fight.areaId &&
+                                areasWithActiveFight.has(fight.areaId),
+                              )}
+                              onOpen={() => setSelectedFightId(fight.id)}
+                              onStart={handleStartFight}
+                              onFinish={(fightId) => setFinishFightId(fightId)}
+                              onOpenScoreboard={(fightId) =>
+                                setScoreboardFightId(fightId)
+                              }
+                              onEdit={(fightId) => {
+                                setFightFormMode('edit');
+                                setFightFormFightId(fightId);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </section>
                   </>
                 ) : null}
 
-                <div className="grid gap-3 md:hidden">
+                <div className="grid gap-2 md:hidden">
                   {filteredFights.map((fight) => (
                     <Card
                       key={fight.id}
-                      className="overflow-hidden border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]"
+                      className="overflow-hidden border-2 border-slate-900 p-0 shadow-[3px_3px_0_0_rgba(15,23,42,0.9)]"
                     >
-                      <CardContent className="space-y-4 p-4">
-                        <div className="flex items-start justify-between gap-3">
+                      <CardContent className="space-y-2 p-3">
+                        <div className="flex items-start justify-between gap-2">
                           <button
                             type="button"
                             onClick={() => setSelectedFightId(fight.id)}
-                            className="text-left text-sm font-semibold leading-5 text-slate-950 underline-offset-4 hover:underline"
+                            className="text-left text-sm font-semibold leading-tight text-slate-950 underline-offset-4 hover:underline"
                           >
-                            {fight.athleteA?.name || 'A definir'} vs {fight.athleteB?.name || 'A definir'}
+                            {fight.athleteA?.name || 'A definir'} vs{' '}
+                            {fight.athleteB?.name || 'A definir'}
                           </button>
-                          <span className={getCompactFightStatusBadgeClassName(fight.status)}>
+                          <span
+                            className={getCompactFightStatusBadgeClassName(
+                              fight.status,
+                            )}
+                          >
                             {getFightStatusLabel(fight.status)}
                           </span>
                         </div>
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                              Área
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-950">
-                              {fight.areaName || '-'}
-                            </p>
-                          </div>
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                              Categoria / Chave
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-950">
-                              {getFightGroupLabel(fight) || '-'}
-                            </p>
-                          </div>
-                          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
-                            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                              Vencedor
-                            </p>
-                            <p className="mt-1 text-sm font-semibold text-slate-950">
-                              {resolveWinnerName(fight)}
-                            </p>
-                          </div>
-                        </div>
+                        <p className="text-xs font-semibold leading-tight text-slate-600">
+                          {getFightPlacementLabel(fight) || '-'}
+                        </p>
 
                         {canManageFights ? (
                           <FightActions
@@ -1043,7 +1065,7 @@ export default function FightsTab() {
                             isFinishing={finishMutation.isPending}
                             isAreaBusy={Boolean(
                               fight.areaId &&
-                                areasWithActiveFight.has(fight.areaId),
+                              areasWithActiveFight.has(fight.areaId),
                             )}
                             onStart={handleStartFight}
                             onFinish={(fightId) => setFinishFightId(fightId)}
@@ -1078,15 +1100,7 @@ export default function FightsTab() {
                           <TableHead className="text-xs sm:text-sm">
                             Rodada
                           </TableHead>
-                          <TableHead className="text-xs sm:text-sm">
-                            Área
-                          </TableHead>
-                          <TableHead className="text-xs sm:text-sm">
-                            Categoria / Chave
-                          </TableHead>
-                          <TableHead className="text-xs sm:text-sm">
-                            Vencedor
-                          </TableHead>
+                          <TableHead className="text-xs sm:text-sm" />
                           {canManageFights ? (
                             <TableHead className="text-xs sm:text-sm">
                               Ações
@@ -1104,7 +1118,10 @@ export default function FightsTab() {
                             }
                             onDragStart={(event) => {
                               event.dataTransfer.effectAllowed = 'move';
-                              event.dataTransfer.setData('text/plain', fight.id);
+                              event.dataTransfer.setData(
+                                'text/plain',
+                                fight.id,
+                              );
                               handleDragStartFight(fight.id);
                             }}
                             onDragEnter={() => handleDragEnterFight(fight.id)}
@@ -1162,13 +1179,7 @@ export default function FightsTab() {
                               {getFightRoundLabel(fight.round)}
                             </TableCell>
                             <TableCell className="py-3 text-xs sm:text-sm">
-                              {fight.areaName || '-'}
-                            </TableCell>
-                            <TableCell className="py-3 text-xs sm:text-sm">
-                              {getFightGroupLabel(fight) || '-'}
-                            </TableCell>
-                            <TableCell className="py-3 text-xs sm:text-sm">
-                              {resolveWinnerName(fight)}
+                              {getFightPlacementLabel(fight) || '-'}
                             </TableCell>
                             {canManageFights ? (
                               <TableCell className="py-3">
@@ -1178,7 +1189,7 @@ export default function FightsTab() {
                                   isFinishing={finishMutation.isPending}
                                   isAreaBusy={Boolean(
                                     fight.areaId &&
-                                      areasWithActiveFight.has(fight.areaId),
+                                    areasWithActiveFight.has(fight.areaId),
                                   )}
                                   onStart={handleStartFight}
                                   onFinish={(fightId) =>
@@ -1213,7 +1224,10 @@ export default function FightsTab() {
                                 : 'bg-slate-50'
                             }
                           >
-                            <TableCell colSpan={8} className="py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                            <TableCell
+                              colSpan={canManageFights ? 6 : 5}
+                              className="py-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500"
+                            >
                               Solte aqui para mover ao final da lista visível
                             </TableCell>
                           </TableRow>
@@ -1240,8 +1254,9 @@ export default function FightsTab() {
             isFinishing={finishMutation.isPending}
             isAreaBusy={Boolean(
               selectedFight?.areaId &&
-                areasWithActiveFight.has(selectedFight.areaId),
+              areasWithActiveFight.has(selectedFight.areaId),
             )}
+            canManage={canManageFights}
           />
 
           <FightFormDialog
@@ -1357,7 +1372,11 @@ function FightActions({
         </Button>
       ) : null}
       {onEdit ? (
-        <Button type="button" variant="outline" onClick={() => onEdit(fight.id)}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onEdit(fight.id)}
+        >
           <Pencil className="mr-2 h-4 w-4" />
           Editar
         </Button>
@@ -1403,21 +1422,34 @@ function MetricTile({
   value: string;
   tone?: 'default' | 'live' | 'upcoming' | 'warning';
 }) {
-  const className =
+  const toneText =
     tone === 'live'
-      ? 'border-red-300 bg-red-50 text-red-900'
+      ? 'text-red-900'
       : tone === 'upcoming'
-        ? 'border-sky-300 bg-sky-50 text-sky-900'
+        ? 'text-sky-900'
         : tone === 'warning'
-          ? 'border-amber-300 bg-amber-50 text-amber-900'
-        : 'border-slate-300 bg-slate-50 text-slate-900';
+          ? 'text-amber-900'
+          : 'text-slate-900';
+  // No mobile a metrica e so texto; a caixa colorida volta a partir de lg.
+  const toneSurface =
+    tone === 'live'
+      ? 'lg:border-red-300 lg:bg-red-50'
+      : tone === 'upcoming'
+        ? 'lg:border-sky-300 lg:bg-sky-50'
+        : tone === 'warning'
+          ? 'lg:border-amber-300 lg:bg-amber-50'
+          : 'lg:border-slate-300 lg:bg-slate-50';
 
   return (
-    <div className={`rounded-2xl border-2 p-4 ${className}`}>
-      <p className="text-xs font-black uppercase tracking-[0.14em] opacity-70">
+    <div
+      className={`text-center lg:rounded-2xl lg:border-2 lg:p-4 lg:text-left ${toneText} ${toneSurface}`}
+    >
+      <p className="text-[10px] font-black uppercase leading-tight tracking-[0.06em] opacity-70 lg:text-xs lg:tracking-[0.14em]">
         {label}
       </p>
-      <p className="mt-2 text-3xl font-black">{value}</p>
+      <p className="text-xl font-black leading-none lg:mt-2 lg:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }
@@ -1638,6 +1670,7 @@ function FightDetailDrawer({
   isStarting,
   isFinishing,
   isAreaBusy,
+  canManage,
 }: {
   fight: Fight | null;
   isOpen: boolean;
@@ -1649,6 +1682,7 @@ function FightDetailDrawer({
   isStarting: boolean;
   isFinishing: boolean;
   isAreaBusy: boolean;
+  canManage: boolean;
 }) {
   return (
     <Dialog
@@ -1724,10 +1758,10 @@ function FightDetailDrawer({
                   />
                 </div>
               </>
-              ) : null}
+            ) : null}
           </div>
 
-          {fight ? (
+          {fight && canManage ? (
             <DialogFooter className="border-t border-slate-200 px-6 py-5">
               <Button
                 type="button"
