@@ -15,11 +15,10 @@ import { Card, CardContent } from '@/shared/ui/card';
 
 const POLLING_INTERVAL = 4000;
 
-// Agendadas primeiro; em andamento e finalizadas ficam por ultimo.
 const STATUS_ORDER: Record<Fight['status'], number> = {
-  PENDING: 0,
+  IN_PROGRESS: 0,
   CALLED: 0,
-  IN_PROGRESS: 1,
+  PENDING: 1,
   FINISHED: 2,
 };
 
@@ -35,7 +34,7 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
   const area = queueQuery.data?.area ?? null;
 
   // Fila unica, sem duplicatas e ja ordenada: agendadas no topo, em andamento
-  // e finalizadas por ultimo. Dentro de cada grupo, respeita o campo `order`.
+  // e finalizadas por ultimo. Dentro de cada grupo, respeita a posicao na fila.
   const orderedFights = useMemo(() => {
     const nextFight = queueQuery.data?.nextFight ?? null;
     const queue = queueQuery.data?.queue ?? [];
@@ -61,10 +60,10 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
           return byStatus;
         }
 
-        const orderA = a.fight.order ?? Number.MAX_SAFE_INTEGER;
-        const orderB = b.fight.order ?? Number.MAX_SAFE_INTEGER;
-        if (orderA !== orderB) {
-          return orderA - orderB;
+        const positionA = a.fight.queuePosition ?? Number.MAX_SAFE_INTEGER;
+        const positionB = b.fight.queuePosition ?? Number.MAX_SAFE_INTEGER;
+        if (positionA !== positionB) {
+          return positionA - positionB;
         }
 
         return a.index - b.index;
@@ -74,6 +73,7 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
 
 
   const upcoming =
+    orderedFights.find((fight) => fight.status === 'IN_PROGRESS') ??
     orderedFights.find((fight) => fight.status === 'CALLED') ??
     orderedFights.find((fight) => fight.status === 'PENDING') ??
     null;
@@ -81,7 +81,18 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
   const pendingCount = orderedFights.filter(
     (fight) => fight.status === 'PENDING',
   ).length;
-  const isUpcomingCalled = upcoming?.status === 'CALLED';
+  const highlightLabel =
+    upcoming?.status === 'IN_PROGRESS'
+      ? 'Em andamento'
+      : upcoming?.status === 'CALLED'
+        ? 'Ja chamada'
+        : 'Proxima';
+  const highlightClassName =
+    upcoming?.status === 'IN_PROGRESS'
+      ? 'bg-blue-100'
+      : upcoming?.status === 'CALLED'
+        ? 'bg-violet-100'
+        : 'bg-amber-100';
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-4 sm:space-y-6">
@@ -119,13 +130,11 @@ export default function AreaQueuePage({ areaId }: { areaId: string }) {
         <>
           {upcoming ? (
             <section
-              className={`rounded-3xl border-4 border-slate-900 p-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] sm:p-6 ${
-                isUpcomingCalled ? 'bg-violet-100' : 'bg-amber-100'
-              }`}
+              className={`rounded-3xl border-4 border-slate-900 p-4 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)] sm:p-6 ${highlightClassName}`}
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex rounded-full border-2 border-slate-900 bg-slate-950 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-white">
-                  {isUpcomingCalled ? 'Ja chamada' : 'Proxima'}
+                  {highlightLabel}
                 </span>
                 <span className={getFightStatusBadgeClassName(upcoming.status)}>
                   {getFightStatusLabel(upcoming.status)}

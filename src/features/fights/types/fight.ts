@@ -21,6 +21,7 @@ export type Fight = {
   keyGroupName: string;
   round: number | null;
   order: number | null;
+  queuePosition: number | null;
   areaId: string | null;
   areaName: string;
   athleteA: FightParticipant;
@@ -408,6 +409,7 @@ export function normalizeFight(input: unknown): Fight {
       ]) || (keyGroupId ? `Chave ${keyGroupId}` : ''),
     round: readNumber(record, ['round', 'roundNumber']),
     order: readNumber(record, ['order', 'orderIndex', 'fightOrder', 'sequence']),
+    queuePosition: readNumber(record, ['position', 'queuePosition']),
     areaId: readIdentifier(record, ['areaId']),
     areaName: readString(record, ['areaName', 'area', 'matName']),
     athleteA,
@@ -443,6 +445,11 @@ export function normalizeFight(input: unknown): Fight {
       athleteB?.academy ||
       '-',
   };
+}
+
+// Identificacao da luta na UI: categoria quando existir, senao o nome da chave.
+export function getFightGroupLabel(fight: Fight): string {
+  return fight.categoryName || fight.keyGroupName || '';
 }
 
 export function normalizeFightsResponse(response: FightApiResponse): Fight[] {

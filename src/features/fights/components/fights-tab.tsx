@@ -44,6 +44,7 @@ import {
   FightStatus,
   getFightRoundLabel,
   getFightStatusBadgeClassName,
+  getFightGroupLabel,
   getFightStatusLabel,
   resolveFightWinnerName,
 } from '@/features/fights/types/fight';
@@ -67,6 +68,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/ui/table';
+import { useRoleAccess } from '@/features/auth/hooks/use-role-access';
 import { useToast } from '@/shared/ui/use-toast';
 import { useCompetitionSocket } from '@/hooks/useCompetitionSocket';
 import { clearAreaScoreboardState } from '@/features/fights/lib/scoreboard-sync';
@@ -110,6 +112,11 @@ function getCompactFightStatusBadgeClassName(status: Fight['status']) {
 }
 
 export default function FightsTab() {
+  // Staff acompanha a competicao em modo leitura; executar luta e do mesario
+  // (DESK) e da organizacao.
+  const { isAllowed: canManageFights } = useRoleAccess({
+    allow: ['DESK', 'ORGANIZATION'],
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | FightStatus>('ALL');
@@ -739,19 +746,21 @@ export default function FightsTab() {
                   </select>
                 </label>
 
-                <div className="flex items-end">
-                  <Button
-                    type="button"
-                    className="h-11 w-full"
-                    onClick={() => {
-                      setFightFormMode('create');
-                      setFightFormFightId('NEW');
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Criar luta manual
-                  </Button>
-                </div>
+                {canManageFights ? (
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      className="h-11 w-full"
+                      onClick={() => {
+                        setFightFormMode('create');
+                        setFightFormFightId('NEW');
+                      }}
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Criar luta manual
+                    </Button>
+                  </div>
+                ) : null}
               </div>
 
               <div className="grid gap-4 lg:grid-cols-4">
@@ -778,7 +787,7 @@ export default function FightsTab() {
             </CardContent>
           </Card>
 
-          {!fightsQuery.isLoading && !fightsQuery.isError && orderedFights.length > 0 && (
+          {canManageFights && !fightsQuery.isLoading && !fightsQuery.isError && orderedFights.length > 0 && (
             <Card className="border-4 border-slate-900 p-0 shadow-[6px_6px_0_0_rgba(15,23,42,0.95)]">
               <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
                 <div className="space-y-1">
@@ -899,6 +908,8 @@ export default function FightsTab() {
             !fightsQuery.isError &&
             filteredFights.length > 0 && (
               <>
+                {canManageFights ? (
+                  <>
                 <section className="space-y-4">
                   <div className="flex items-center gap-3">
                     <span className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
@@ -975,6 +986,8 @@ export default function FightsTab() {
                     </div>
                   )}
                 </section>
+                  </>
+                ) : null}
 
                 <div className="grid gap-3 md:hidden">
                   {filteredFights.map((fight) => (
@@ -1007,10 +1020,10 @@ export default function FightsTab() {
                           </div>
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                             <p className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
-                              Categoria
+                              Categoria / Chave
                             </p>
                             <p className="mt-1 text-sm font-semibold text-slate-950">
-                              {fight.categoryName || '-'}
+                              {getFightGroupLabel(fight) || '-'}
                             </p>
                           </div>
                           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
@@ -1023,23 +1036,26 @@ export default function FightsTab() {
                           </div>
                         </div>
 
-                        <FightActions
-                          fight={fight}
-                          isStarting={startMutation.isPending}
-                          isFinishing={finishMutation.isPending}
-                          isAreaBusy={Boolean(
-                            fight.areaId && areasWithActiveFight.has(fight.areaId),
-                          )}
-                          onStart={handleStartFight}
-                          onFinish={(fightId) => setFinishFightId(fightId)}
-                          onOpenScoreboard={(fightId) =>
-                            setScoreboardFightId(fightId)
-                          }
-                          onEdit={(fightId) => {
-                            setFightFormMode('edit');
-                            setFightFormFightId(fightId);
-                          }}
-                        />
+                        {canManageFights ? (
+                          <FightActions
+                            fight={fight}
+                            isStarting={startMutation.isPending}
+                            isFinishing={finishMutation.isPending}
+                            isAreaBusy={Boolean(
+                              fight.areaId &&
+                                areasWithActiveFight.has(fight.areaId),
+                            )}
+                            onStart={handleStartFight}
+                            onFinish={(fightId) => setFinishFightId(fightId)}
+                            onOpenScoreboard={(fightId) =>
+                              setScoreboardFightId(fightId)
+                            }
+                            onEdit={(fightId) => {
+                              setFightFormMode('edit');
+                              setFightFormFightId(fightId);
+                            }}
+                          />
+                        ) : null}
                       </CardContent>
                     </Card>
                   ))}
@@ -1066,21 +1082,26 @@ export default function FightsTab() {
                             Área
                           </TableHead>
                           <TableHead className="text-xs sm:text-sm">
-                            Categoria
+                            Categoria / Chave
                           </TableHead>
                           <TableHead className="text-xs sm:text-sm">
                             Vencedor
                           </TableHead>
-                          <TableHead className="text-xs sm:text-sm">
-                            Ações
-                          </TableHead>
+                          {canManageFights ? (
+                            <TableHead className="text-xs sm:text-sm">
+                              Ações
+                            </TableHead>
+                          ) : null}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredFights.map((fight) => (
                           <TableRow
                             key={fight.id}
-                            draggable={!updateFightOrderMutation.isPending}
+                            draggable={
+                              canManageFights &&
+                              !updateFightOrderMutation.isPending
+                            }
                             onDragStart={(event) => {
                               event.dataTransfer.effectAllowed = 'move';
                               event.dataTransfer.setData('text/plain', fight.id);
@@ -1106,11 +1127,17 @@ export default function FightsTab() {
                             }`}
                           >
                             <TableCell className="py-3">
-                              <FightOrderHandle
-                                order={fight.order}
-                                isDragging={draggedFightId === fight.id}
-                                isSaving={updateFightOrderMutation.isPending}
-                              />
+                              {canManageFights ? (
+                                <FightOrderHandle
+                                  order={fight.order}
+                                  isDragging={draggedFightId === fight.id}
+                                  isSaving={updateFightOrderMutation.isPending}
+                                />
+                              ) : (
+                                <span className="text-sm font-black text-slate-950">
+                                  {fight.order ?? '-'}
+                                </span>
+                              )}
                             </TableCell>
                             <TableCell className="py-3">
                               <button
@@ -1138,33 +1165,35 @@ export default function FightsTab() {
                               {fight.areaName || '-'}
                             </TableCell>
                             <TableCell className="py-3 text-xs sm:text-sm">
-                              {fight.categoryName || '-'}
+                              {getFightGroupLabel(fight) || '-'}
                             </TableCell>
                             <TableCell className="py-3 text-xs sm:text-sm">
                               {resolveWinnerName(fight)}
                             </TableCell>
-                            <TableCell className="py-3">
-                              <FightActions
-                                fight={fight}
-                                isStarting={startMutation.isPending}
-                                isFinishing={finishMutation.isPending}
-                                isAreaBusy={Boolean(
-                                  fight.areaId &&
-                                    areasWithActiveFight.has(fight.areaId),
-                                )}
-                                onStart={handleStartFight}
-                                onFinish={(fightId) =>
-                                  setFinishFightId(fightId)
-                                }
-                                onOpenScoreboard={(fightId) =>
-                                  setScoreboardFightId(fightId)
-                                }
-                                onEdit={(fightId) => {
-                                  setFightFormMode('edit');
-                                  setFightFormFightId(fightId);
-                                }}
-                              />
-                            </TableCell>
+                            {canManageFights ? (
+                              <TableCell className="py-3">
+                                <FightActions
+                                  fight={fight}
+                                  isStarting={startMutation.isPending}
+                                  isFinishing={finishMutation.isPending}
+                                  isAreaBusy={Boolean(
+                                    fight.areaId &&
+                                      areasWithActiveFight.has(fight.areaId),
+                                  )}
+                                  onStart={handleStartFight}
+                                  onFinish={(fightId) =>
+                                    setFinishFightId(fightId)
+                                  }
+                                  onOpenScoreboard={(fightId) =>
+                                    setScoreboardFightId(fightId)
+                                  }
+                                  onEdit={(fightId) => {
+                                    setFightFormMode('edit');
+                                    setFightFormFightId(fightId);
+                                  }}
+                                />
+                              </TableCell>
+                            ) : null}
                           </TableRow>
                         ))}
                         {draggedFightId ? (
@@ -1447,7 +1476,9 @@ function LiveFightCard({
 
         <div className="flex flex-wrap gap-2 border-t-2 border-red-200 pt-4">
           <InfoPill label={fight.areaName || 'Sem área'} tone="live" />
-          <InfoPill label={fight.categoryName || 'Sem categoria'} tone="live" />
+          {getFightGroupLabel(fight) ? (
+            <InfoPill label={getFightGroupLabel(fight)} tone="live" />
+          ) : null}
           {fight.order ? (
             <InfoPill label={`Ordem ${fight.order}`} tone="live" />
           ) : null}
@@ -1527,10 +1558,9 @@ function UpcomingFightCard({
 
         <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
           <InfoPill label={fight.areaName || 'Sem área'} tone="upcoming" />
-          <InfoPill
-            label={fight.categoryName || 'Sem categoria'}
-            tone="upcoming"
-          />
+          {getFightGroupLabel(fight) ? (
+            <InfoPill label={getFightGroupLabel(fight)} tone="upcoming" />
+          ) : null}
         </div>
 
         <FightActions
@@ -1655,14 +1685,12 @@ function FightDetailDrawer({
                 </div>
 
                 <DetailGrid>
-                  <DetailItem
-                    label="Categoria"
-                    value={fight.categoryName || '-'}
-                  />
-                  <DetailItem
-                    label="Chave"
-                    value={fight.keyGroupName || (fight.keyGroupId ? `Chave ${fight.keyGroupId}` : '-')}
-                  />
+                  {fight.categoryName ? (
+                    <DetailItem label="Categoria" value={fight.categoryName} />
+                  ) : null}
+                  {fight.keyGroupName ? (
+                    <DetailItem label="Chave" value={fight.keyGroupName} />
+                  ) : null}
                   <DetailItem
                     label="Ordem"
                     value={fight.order ? String(fight.order) : '-'}

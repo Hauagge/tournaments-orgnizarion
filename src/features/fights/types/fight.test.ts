@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   FightApiResponse,
+  getFightGroupLabel,
+  normalizeFight,
   normalizeFightsResponse,
 } from '@/features/fights/types/fight';
 
@@ -60,5 +62,41 @@ describe('normalizeFightsResponse', () => {
       nextFightId: '130',
       nextFightSlot: 'A',
     });
+  });
+});
+
+describe('getFightGroupLabel', () => {
+  it('usa a categoria quando ela existe', () => {
+    const fight = normalizeFight({
+      id: 1,
+      categoryId: 4,
+      categoryName: 'Adulto Azul Leve',
+      keyGroupId: 8,
+      keyGroupName: 'Chave A',
+    });
+
+    expect(getFightGroupLabel(fight)).toBe('Adulto Azul Leve');
+  });
+
+  it('cai para o nome da chave quando nao ha categoria', () => {
+    const fight = normalizeFight({
+      id: 1,
+      keyGroupId: 8,
+      keyGroupName: 'Chave A',
+    });
+
+    expect(getFightGroupLabel(fight)).toBe('Chave A');
+  });
+
+  it('usa o id da chave quando ela nao tem nome', () => {
+    const fight = normalizeFight({ id: 1, keyGroupId: 8 });
+
+    expect(getFightGroupLabel(fight)).toBe('Chave 8');
+  });
+
+  it('devolve vazio quando nao ha categoria nem chave', () => {
+    const fight = normalizeFight({ id: 1 });
+
+    expect(getFightGroupLabel(fight)).toBe('');
   });
 });

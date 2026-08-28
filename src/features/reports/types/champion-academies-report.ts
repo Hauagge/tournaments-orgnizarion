@@ -44,6 +44,24 @@ function readString(record: Record<string, unknown>, keys: string[]) {
 
   return '';
 }
+function readIdentifier(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+
+  return '';
+}
+
+function readOptionalIdentifier(record: Record<string, unknown>, keys: string[]) {
+  return readIdentifier(record, keys) || undefined;
+}
 
 function readOptionalString(record: Record<string, unknown>, keys: string[]) {
   const value = readString(record, keys);
@@ -83,9 +101,9 @@ function normalizeChampionAthleteItem(input: unknown): ChampionAthleteItem {
   const record = isObject(input) ? input : {};
 
   return {
-    athleteId: readString(record, ['athleteId', 'id']),
+    athleteId: readIdentifier(record, ['athleteId', 'id']),
     athleteName: readString(record, ['athleteName', 'name']),
-    categoryId: readString(record, ['categoryId']),
+    categoryId: readIdentifier(record, ['categoryId']),
     categoryName: readString(record, ['categoryName']),
     belt: readOptionalString(record, ['belt']),
     ageDivision: readOptionalString(record, ['ageDivision']),
@@ -101,7 +119,7 @@ function normalizeChampionAcademyRankingItem(
 
   return {
     position: readNumber(record, ['position']) || fallbackPosition,
-    academyId: readOptionalString(record, ['academyId']),
+    academyId: readOptionalIdentifier(record, ['academyId']),
     academyName:
       readString(record, ['academyName', 'name']) || 'Academia não informada',
     totalChampions: readNumber(record, ['totalChampions', 'count']),
@@ -121,7 +139,7 @@ export function normalizeChampionAcademiesReport(
   );
 
   return {
-    competitionId: readString(nestedData, ['competitionId']),
+    competitionId: readIdentifier(nestedData, ['competitionId']),
     totalChampionAthletes: readNumber(nestedData, [
       'totalChampionAthletes',
       'totalChampions',

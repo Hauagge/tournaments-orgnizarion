@@ -16,6 +16,7 @@ function fight(overrides: Partial<Fight>): Fight {
     keyGroupName: 'Adulto Azul Leve',
     round: 1,
     order: 1,
+    queuePosition: null,
     areaId: null,
     areaName: '',
     athleteA: null,

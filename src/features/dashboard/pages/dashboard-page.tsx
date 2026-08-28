@@ -13,6 +13,7 @@ import { useCompetitionSocket } from '@/hooks/useCompetitionSocket';
 import {
   Fight,
   FightStatus,
+  getFightGroupLabel,
   getFightStatusBadgeClassName,
   getFightStatusLabel,
 } from '@/features/fights/types/fight';
@@ -111,8 +112,17 @@ export default function DashboardPage() {
           fights.find(
             (fight) => fight.areaId === area.id && fight.status === 'IN_PROGRESS',
           ) ?? null;
+        // O destaque da fila pode ser a propria luta em andamento; nesse caso a
+        // "proxima" e o primeiro item ainda na fila, em ordem de posicao.
+        const highlightedFight =
+          queueData?.nextFight && queueData.nextFight.id !== currentFight?.id
+            ? queueData.nextFight
+            : null;
         const nextFight =
-          queueData?.nextFight ??
+          highlightedFight ??
+          queueData?.queue.find(
+            (fight) => fight.status === 'CALLED' || fight.status === 'PENDING',
+          ) ??
           fights.find(
             (fight) => fight.areaId === area.id && fight.status === 'CALLED',
           ) ??
@@ -390,9 +400,9 @@ function DashboardFightBlock({
             <span className={getFightStatusBadgeClassName(fight.status)}>
               {getFightStatusLabel(fight.status)}
             </span>
-            {fight.categoryName ? (
+            {getFightGroupLabel(fight) ? (
               <span className="inline-flex rounded-full border-2 border-slate-900 bg-white px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-slate-900">
-                {fight.categoryName}
+                {getFightGroupLabel(fight)}
               </span>
             ) : null}
           </div>
@@ -400,7 +410,9 @@ function DashboardFightBlock({
             {formatFightLabel(fight)}
           </p>
           <p className="mt-2 text-sm text-slate-600">
-            {fight.keyGroupName || fight.areaName || 'Sem identificação'}
+            {fight.categoryName
+              ? fight.keyGroupName || fight.areaName || 'Sem identificação'
+              : fight.areaName || 'Sem identificação'}
           </p>
         </>
       ) : (
@@ -430,7 +442,7 @@ function FightListCard({
             <TableRow className="hover:bg-white">
               <TableHead>Luta</TableHead>
               <TableHead>Área</TableHead>
-              <TableHead>Categoria</TableHead>
+              <TableHead>Categoria / Chave</TableHead>
               <TableHead>Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -446,7 +458,7 @@ function FightListCard({
                 <TableRow key={fight.id}>
                   <TableCell className="font-medium">{formatFightLabel(fight)}</TableCell>
                   <TableCell>{fight.areaName || '-'}</TableCell>
-                  <TableCell>{fight.categoryName || '-'}</TableCell>
+                  <TableCell>{getFightGroupLabel(fight) || '-'}</TableCell>
                   <TableCell>
                     <span className={getFightStatusBadgeClassName(fight.status)}>
                       {getFightStatusLabel(fight.status)}

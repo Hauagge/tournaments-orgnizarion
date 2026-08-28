@@ -22,6 +22,7 @@ function createFight(id: string, order: number | null, areaId: string | null = n
     areaId,
     areaName: areaId ? `Area ${areaId}` : '',
     order,
+    queuePosition: null,
     athleteA: null,
     athleteB: null,
     winner: null,

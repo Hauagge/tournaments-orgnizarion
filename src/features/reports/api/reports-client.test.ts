@@ -48,6 +48,39 @@ describe('getChampionAcademiesReport', () => {
     expect(response.academies[0]?.academyName).toBe('Academia A');
   });
 
+  it('aceita ids numericos vindos do backend', async () => {
+    vi.mocked(apiFetch).mockResolvedValue({
+      data: {
+        competitionId: 1,
+        totalChampionAthletes: 1,
+        academies: [
+          {
+            position: 1,
+            academyId: 7,
+            academyName: 'Academia A',
+            totalChampions: 1,
+            champions: [
+              {
+                athleteId: 10,
+                athleteName: 'João Silva',
+                categoryId: 3,
+                categoryName: 'Adulto / Azul / Médio',
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const response = await getChampionAcademiesReport('1');
+
+    expect(response.competitionId).toBe('1');
+    expect(response.academies[0]?.academyId).toBe('7');
+    expect(response.academies[0]?.champions[0]).toEqual(
+      expect.objectContaining({ athleteId: '10', categoryId: '3' }),
+    );
+  });
+
   it('envia filtros na query string quando informados', async () => {
     vi.mocked(apiFetch).mockResolvedValue({
       data: {

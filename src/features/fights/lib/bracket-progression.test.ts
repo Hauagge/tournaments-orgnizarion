@@ -13,6 +13,7 @@ function buildFight(partial: Partial<Fight>): Fight {
     keyGroupName: 'Chave 1',
     round: 1,
     order: 1,
+    queuePosition: null,
     areaId: null,
     areaName: '',
     athleteA: null,
