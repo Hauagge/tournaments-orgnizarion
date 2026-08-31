@@ -16,11 +16,53 @@ export const paymentStatusOptions = [
 
 export type PaymentStatus = (typeof paymentStatusOptions)[number];
 
+export const genderOptions = ['MALE', 'FEMALE'] as const;
+
+export type AthleteGender = (typeof genderOptions)[number];
+
+const GENDER_ALIASES: Record<string, AthleteGender> = {
+  M: 'MALE',
+  MALE: 'MALE',
+  MASC: 'MALE',
+  MASCULINO: 'MALE',
+  F: 'FEMALE',
+  FEM: 'FEMALE',
+  FEMALE: 'FEMALE',
+  FEMININO: 'FEMALE',
+};
+
+export function normalizeGender(value: unknown): AthleteGender | null {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toUpperCase();
+
+  return GENDER_ALIASES[normalized] ?? null;
+}
+
+export function getGenderLabel(gender: AthleteGender | null): string {
+  if (gender === 'MALE') {
+    return 'Masculino';
+  }
+
+  if (gender === 'FEMALE') {
+    return 'Feminino';
+  }
+
+  return '';
+}
+
 export type Athlete = {
   id: string;
   name: string;
   documentNumber: string;
   belt: string;
+  gender: AthleteGender | null;
   birthDate: string | null;
   age: number | null;
   declaredWeight: number | null;
@@ -37,6 +79,7 @@ export type AthletePayload = {
   fullName: string;
   documentNumber: string;
   belt: string;
+  gender?: AthleteGender | null;
   birthDate: string;
   declaredWeight: number;
   team: string;
@@ -203,6 +246,9 @@ export function normalizeAthlete(input: unknown): Athlete {
       'documento',
     ]),
     belt: readString(record, ['belt', 'faixa']),
+    gender: normalizeGender(
+      record.gender ?? record.sexo ?? record.sex ?? record.genero,
+    ),
     birthDate,
     age: calculateAge(birthDate) ?? rawAge,
     declaredWeight: normalizeWeightToKilograms(

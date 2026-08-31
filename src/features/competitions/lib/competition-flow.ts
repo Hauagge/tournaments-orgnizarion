@@ -54,7 +54,7 @@ export function getCompetitionEntry(
     };
   }
 
-  if (mode === 'ABSOLUTE_GP') {
+  if (mode === 'ABSOLUTE_GP' || mode === 'CBJJ') {
     return {
       href: '/categories',
       label: 'Abrir categorias',
@@ -86,7 +86,7 @@ export function getCompetitionSectionItems(
     },
   ];
 
-  if (mode === 'ABSOLUTE_GP') {
+  if (mode === 'ABSOLUTE_GP' || mode === 'CBJJ') {
     return [
       ...setupItems,
       { href: '/categories', label: 'Categorias', blocked: flowBlocked },

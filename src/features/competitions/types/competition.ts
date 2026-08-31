@@ -1,10 +1,11 @@
-export const competitionModes = ['KEYS', 'ABSOLUTE_GP'] as const;
+export const competitionModes = ['KEYS', 'ABSOLUTE_GP', 'CBJJ'] as const;
 
 export type CompetitionMode = (typeof competitionModes)[number];
 
 export const competitionModeLabels: Record<CompetitionMode, string> = {
   KEYS: 'Chaves',
   ABSOLUTE_GP: 'GP absoluto',
+  CBJJ: 'CBJJ (tabela oficial)',
 };
 
 export type Competition = {
@@ -78,6 +79,9 @@ function readMode(record: Record<string, unknown>): CompetitionMode {
   const mode = readString(record, ['mode']).toUpperCase();
   if (mode === 'ABSOLUTE_GP') {
     return 'ABSOLUTE_GP';
+  }
+  if (mode === 'CBJJ') {
+    return 'CBJJ';
   }
   if (mode === 'TEAM' || mode === 'KEYS') {
     return 'KEYS';

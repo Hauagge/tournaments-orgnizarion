@@ -5,6 +5,7 @@ export const athleteFormSchema = z.object({
   fullName: z.string().min(2, 'Informe o nome do atleta.'),
   documentNumber: z.string().min(1, 'Informe o RG do atleta.'),
   belt: z.string().min(1, 'Selecione a faixa.'),
+  gender: z.enum(['', 'MALE', 'FEMALE']).optional(),
   birthDate: z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
     message: 'Informe uma data de nascimento válida.',
   }),

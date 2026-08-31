@@ -75,11 +75,14 @@ export default function AthletesPage() {
   async function handleSubmit(values: AthleteFormValues) {
     if (!activeCompetitionId) return;
 
+    // O select usa string vazia para "nao informado"; a API espera null.
+    const payload = { ...values, gender: values.gender || null };
+
     try {
       if (selectedAthlete) {
         await updateMutation.mutateAsync({
           id: selectedAthlete.id,
-          payload: values,
+          payload,
         });
 
         toast({
@@ -88,7 +91,7 @@ export default function AthletesPage() {
           variant: 'success',
         });
       } else {
-        await createMutation.mutateAsync(values);
+        await createMutation.mutateAsync(payload);
 
         toast({
           title: 'Atleta cadastrado',

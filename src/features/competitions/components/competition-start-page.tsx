@@ -57,7 +57,7 @@ export default function CompetitionStartPage({
 
   const competition = competitionQuery.data;
   const nextSteps =
-    competition.mode === 'ABSOLUTE_GP'
+    competition.mode === 'ABSOLUTE_GP' || competition.mode === 'CBJJ'
       ? [
           'Carregar atletas',
           'Configurar áreas',

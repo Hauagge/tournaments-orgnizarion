@@ -40,7 +40,11 @@ export function CompetitionForm({
     resolver: zodResolver(competitionFormSchema),
     defaultValues: {
       name: defaultValues?.name ?? '',
-      mode: defaultValues?.mode === 'ABSOLUTE_GP' ? 'ABSOLUTE_GP' : 'KEYS',
+      mode:
+        defaultValues?.mode === 'ABSOLUTE_GP' ||
+        defaultValues?.mode === 'CBJJ'
+          ? defaultValues.mode
+          : 'KEYS',
       fightDurationSeconds: defaultValues?.fightDurationSeconds ?? 300,
       weighInMarginGrams: defaultValues?.weighInMarginGrams ?? 500,
       ageSplitYears: defaultValues?.ageSplitYears ?? 2,

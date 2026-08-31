@@ -48,6 +48,7 @@ export function AthleteFormDialog({
       fullName: athlete?.name ?? '',
       documentNumber: athlete?.documentNumber ?? '',
       belt: athlete?.belt ?? '',
+      gender: athlete?.gender ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
       team: athlete?.team ?? '',
@@ -64,6 +65,7 @@ export function AthleteFormDialog({
       fullName: athlete?.name ?? '',
       documentNumber: athlete?.documentNumber ?? '',
       belt: athlete?.belt ?? '',
+      gender: athlete?.gender ?? '',
       birthDate: athlete?.birthDate?.slice(0, 10) ?? '',
       declaredWeight: athlete?.declaredWeight ?? 0,
       team: athlete?.team ?? '',
@@ -132,6 +134,17 @@ export function AthleteFormDialog({
                     {belt}
                   </option>
                 ))}
+              </select>
+            </Field>
+
+            <Field label="Sexo" error={errors.gender?.message}>
+              <select
+                {...register('gender')}
+                className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">Selecione</option>
+                <option value="MALE">Masculino</option>
+                <option value="FEMALE">Feminino</option>
               </select>
             </Field>
 
